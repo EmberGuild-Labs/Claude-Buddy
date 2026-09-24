@@ -29,7 +29,16 @@ enum BuiltInPack {
     "L": "#BFE8FF",
     "N": "#5A3A1E",
     "E": "#2B1B16",
-    "d": "#B65E42"
+    "d": "#B65E42",
+    "g": "#4A4F5C",
+    "q": "#6A7080",
+    "Q": "#9AA0AC",
+    "k": "#23252B",
+    "V": "#3BA55C",
+    "C": "#6B3E1E",
+    "M": "#F4F1EA",
+    "X": "#D9B07A",
+    "x": "#A67C4A"
   },
   "art": {
     "tent": {
@@ -232,6 +241,120 @@ enum BuiltInPack {
         "B": "body",
         "d": "bodyDark"
       }
+    },
+    "coffee-machine": {
+      "frames": {
+        "idle": [
+          "gQQQQQQQQQQQQg",
+          "gqqqqqqqqqqqqg",
+          "gqqkkkkkqqRRqg",
+          "gqqkkkkkqqqqqg",
+          "gqqqqqqqqqqqqg",
+          "gqqqqqqqqqqqqg",
+          "gggggggggggggg",
+          ".gg...kk...gg.",
+          ".gg........gg.",
+          ".gg........gg.",
+          ".gg........gg.",
+          ".gg........gg.",
+          ".gg........gg.",
+          ".gg........gg.",
+          ".gg........gg.",
+          ".gg........gg.",
+          ".gg........gg.",
+          ".gg.kkkkkk.gg.",
+          "kkkkkkkkkkkkkk",
+          "kkkkkkkkkkkkkk"
+        ],
+        "brewing": [
+          "gQQQQQQQQQQQQg",
+          "gqqqqqqqqqqqqg",
+          "gqqkkkkkqqVVqg",
+          "gqqkkkkkqqqqqg",
+          "gqqqqqqqqqqqqg",
+          "gqqqqqqqqqqqqg",
+          "gggggggggggggg",
+          ".gg...kk...gg.",
+          ".gg...C....gg.",
+          ".gg...C....gg.",
+          ".gg...C....gg.",
+          ".gg...C....gg.",
+          ".gg...C....gg.",
+          ".gg...C....gg.",
+          ".gg...C....gg.",
+          ".gg.MCCCCM.gg.",
+          ".gg.MMMMMM.gg.",
+          ".gg.MMMMMM.gg.",
+          "kkkkkkkkkkkkkk",
+          "kkkkkkkkkkkkkk"
+        ]
+      },
+      "frame": "idle"
+    },
+    "steam": {
+      "rows": [
+        ".W.",
+        "W..",
+        ".W.",
+        "..W",
+        ".W."
+      ],
+      "colors": {
+        "W": "#E8E8F0"
+      }
+    },
+    "pizza-box": {
+      "frames": {
+        "closed": [
+          "......................",
+          "......................",
+          "......................",
+          "......................",
+          "......................",
+          "......................",
+          "......................",
+          "......................",
+          "......................",
+          "......................",
+          "xxxxxxxxxxxxxxxxxxxxxx",
+          "XXXXXXXXRRYRRRXXXXXXXX",
+          "XXXXXXXXRRRRYRXXXXXXXX",
+          "xxxxxxxxxxxxxxxxxxxxxx"
+        ],
+        "open": [
+          "xXX...................",
+          "xxX...................",
+          "xxX...................",
+          "xxX...................",
+          "xxX...................",
+          "xxX...................",
+          "xxX...................",
+          "xxX...................",
+          "xxX...................",
+          "xx.OYRYYYRYYYRYYYRYYO.",
+          "xxxOOOOROOOROOOROOOOOx",
+          "XXXXXXXXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXXXXXXXX",
+          "xxxxxxxxxxxxxxxxxxxxxx"
+        ],
+        "empty": [
+          "xXX...................",
+          "xxX...................",
+          "xxX...................",
+          "xxX...................",
+          "xxX...................",
+          "xxX...................",
+          "xxX...................",
+          "xxX...................",
+          "xxX...................",
+          "xx....................",
+          "xxxxxOxxxxOxxRxxOxxxxx",
+          "XXXXXXXXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXXXXXXXX",
+          "xxxxxxxxxxxxxxxxxxxxxx"
+        ]
+      },
+      "frame": "closed"
     }
   },
   "accessories": {
@@ -377,6 +500,45 @@ enum BuiltInPack {
         "..B.....",
         ".B......",
         "B......."
+      ]
+    },
+    "mug": {
+      "title": "Coffee Mug",
+      "slot": "held",
+      "offset": [
+        1,
+        0
+      ],
+      "colors": {
+        "M": "#D94F3D",
+        "m": "#A83A2C",
+        "C": "#6B3E1E"
+      },
+      "rows": [
+        "MCCM..",
+        "MMMMMM",
+        "MMMM.M",
+        "MMMMMM",
+        "mmmm.."
+      ]
+    },
+    "pizza-slice": {
+      "title": "Pizza Slice",
+      "slot": "held",
+      "offset": [
+        1,
+        1
+      ],
+      "colors": {
+        "c": "#C98A3E",
+        "Y": "#FFD447",
+        "R": "#D63B3B"
+      },
+      "rows": [
+        "ccccc",
+        "YRYYY",
+        ".YYR.",
+        "..Y.."
       ]
     }
   },
@@ -692,6 +854,48 @@ enum BuiltInPack {
         {
           "pose": "cheer",
           "time": 0.3
+        }
+      ]
+    },
+    "sip": {
+      "tween": true,
+      "frames": [
+        {
+          "eyes": "closed",
+          "angle": 0,
+          "time": 0.2
+        },
+        {
+          "eyes": "closed",
+          "angle": -10,
+          "time": 0.6
+        },
+        {
+          "eyes": "closed",
+          "angle": -10,
+          "time": 0.2
+        },
+        {
+          "eyes": "happy",
+          "angle": 0,
+          "time": 0.5
+        }
+      ]
+    },
+    "jitter": {
+      "loop": true,
+      "frames": [
+        {
+          "dx": -1,
+          "eyes": "wide",
+          "arms": "up",
+          "time": 0.05
+        },
+        {
+          "dx": 1,
+          "eyes": "wide",
+          "arms": "up",
+          "time": 0.05
         }
       ]
     },
@@ -1688,6 +1892,526 @@ enum BuiltInPack {
         }
       ]
     },
+    "coffee-break": {
+      "title": "Coffee Break",
+      "props": {
+        "machine": {
+          "art": "coffee-machine",
+          "z": "back"
+        }
+      },
+      "steps": [
+        {
+          "say": "Coffee time.",
+          "time": 1.2
+        },
+        {
+          "prop": "machine",
+          "show": {
+            "x": "here+34",
+            "y": "floor-20"
+          }
+        },
+        {
+          "prop": "machine",
+          "move": {
+            "y": "floor"
+          },
+          "time": 0.8,
+          "ease": "out"
+        },
+        {
+          "effect": "sparkle",
+          "at": "machine",
+          "count": 5
+        },
+        {
+          "walk": "machine.left-8",
+          "speed": 30
+        },
+        {
+          "face": "right"
+        },
+        {
+          "prop": "machine",
+          "frame": "brewing"
+        },
+        {
+          "prop": "machine",
+          "shake": 1.8
+        },
+        {
+          "loop": [
+            {
+              "effect": "float",
+              "art": "steam",
+              "at": "machine",
+              "count": 1,
+              "dx": 3,
+              "dy": 10,
+              "time": 1.2
+            },
+            {
+              "wait": 0.45
+            }
+          ],
+          "times": 4
+        },
+        {
+          "prop": "machine",
+          "frame": "idle"
+        },
+        {
+          "wear": "mug"
+        },
+        {
+          "pose": {
+            "eyes": "happy"
+          }
+        },
+        {
+          "say": "Ahh, fresh.",
+          "time": 1.3
+        },
+        {
+          "face": "left"
+        },
+        {
+          "walk": "here-18",
+          "speed": 24
+        },
+        {
+          "face": "right"
+        },
+        {
+          "pose": "sit"
+        },
+        {
+          "loop": [
+            {
+              "play": "sip"
+            },
+            {
+              "effect": "float",
+              "art": "steam",
+              "at": "star",
+              "count": 1,
+              "dx": 3,
+              "dy": 8,
+              "time": 1.2
+            },
+            {
+              "wait": 1.8
+            },
+            {
+              "if": "chance:0.15",
+              "then": [
+                {
+                  "effect": "hearts",
+                  "count": 1
+                }
+              ]
+            }
+          ],
+          "until": [
+            "click",
+            "again"
+          ],
+          "for": 90
+        },
+        {
+          "pose": "stand"
+        },
+        {
+          "say": "Back to work!",
+          "time": 1.2,
+          "async": true
+        },
+        {
+          "prop": "machine",
+          "move": {
+            "y": "floor-20"
+          },
+          "time": 0.7,
+          "ease": "in"
+        },
+        {
+          "prop": "machine",
+          "hide": true
+        },
+        {
+          "unwear": "mug"
+        }
+      ]
+    },
+    "coffee-refill": {
+      "title": "Coffee Refill",
+      "steps": [
+        {
+          "say": "Need more coffee...",
+          "time": 1.4
+        },
+        {
+          "random": [
+            [
+              {
+                "walk": "offleft",
+                "speed": 45
+              },
+              {
+                "wait": 2.5
+              },
+              {
+                "wear": "mug"
+              },
+              {
+                "walk": "start",
+                "speed": 40
+              }
+            ],
+            [
+              {
+                "walk": "offright",
+                "speed": 45
+              },
+              {
+                "wait": 2.5
+              },
+              {
+                "wear": "mug"
+              },
+              {
+                "walk": "start",
+                "speed": 40
+              }
+            ]
+          ]
+        },
+        {
+          "face": "cursor"
+        },
+        {
+          "random": [
+            [
+              {
+                "play": "sip"
+              },
+              {
+                "effect": "float",
+                "art": "steam",
+                "count": 2,
+                "dx": 3,
+                "dy": 8,
+                "time": 1.2
+              },
+              {
+                "say": "Back to it!",
+                "time": 1.3
+              }
+            ],
+            [
+              {
+                "play": "sip"
+              },
+              {
+                "play": "sip"
+              },
+              {
+                "effect": "hearts",
+                "count": 2
+              },
+              {
+                "say": "Perfect.",
+                "time": 1.2
+              }
+            ],
+            [
+              {
+                "play": "sip"
+              },
+              {
+                "say": "Maybe one shot too many...",
+                "time": 1.6
+              },
+              {
+                "walk": "here+30",
+                "speed": 110,
+                "clip": "jitter"
+              },
+              {
+                "walk": "here-60",
+                "speed": 110,
+                "clip": "jitter"
+              },
+              {
+                "walk": "here+30",
+                "speed": 110,
+                "clip": "jitter"
+              },
+              {
+                "pose": "dizzy"
+              },
+              {
+                "effect": "stars",
+                "count": 6
+              },
+              {
+                "wait": 1.2
+              },
+              {
+                "pose": "stand"
+              }
+            ]
+          ]
+        },
+        {
+          "unwear": "mug"
+        }
+      ]
+    },
+    "pizza-party": {
+      "title": "Pizza Party",
+      "cast": [
+        {
+          "role": "star",
+          "who": "main"
+        },
+        {
+          "role": "friend",
+          "who": "other"
+        },
+        {
+          "role": "friend2",
+          "who": "other",
+          "ifMissing": "skip"
+        }
+      ],
+      "props": {
+        "pizza": {
+          "art": "pizza-box",
+          "z": "back"
+        }
+      },
+      "steps": [
+        {
+          "face": "right"
+        },
+        {
+          "say": "Pizza's here!",
+          "time": 1
+        },
+        {
+          "together": [
+            {
+              "who": "friend",
+              "steps": [
+                {
+                  "walk": "star+50",
+                  "speed": 55
+                },
+                {
+                  "face": "star"
+                }
+              ]
+            },
+            {
+              "who": "friend2",
+              "steps": [
+                {
+                  "walk": "star+68",
+                  "speed": 55
+                },
+                {
+                  "face": "star"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "prop": "pizza",
+          "show": {
+            "x": "star+25",
+            "y": "top"
+          }
+        },
+        {
+          "prop": "pizza",
+          "move": {
+            "y": "floor"
+          },
+          "time": 0.7,
+          "ease": "in"
+        },
+        {
+          "effect": "stars",
+          "at": "pizza",
+          "count": 6
+        },
+        {
+          "prop": "pizza",
+          "frame": "open"
+        },
+        {
+          "effect": "sparkle",
+          "at": "pizza",
+          "count": 6
+        },
+        {
+          "say": "Dig in!",
+          "time": 1
+        },
+        {
+          "wear": "pizza-slice",
+          "who": "star"
+        },
+        {
+          "wear": "pizza-slice",
+          "who": "friend"
+        },
+        {
+          "wear": "pizza-slice",
+          "who": "friend2"
+        },
+        {
+          "prop": "pizza",
+          "frame": "empty"
+        },
+        {
+          "together": [
+            {
+              "who": "star",
+              "steps": [
+                {
+                  "play": "munch",
+                  "times": 2
+                },
+                {
+                  "effect": "hearts",
+                  "count": 2
+                }
+              ]
+            },
+            {
+              "who": "friend",
+              "steps": [
+                {
+                  "wait": 0.2
+                },
+                {
+                  "play": "munch",
+                  "times": 2
+                },
+                {
+                  "effect": "hearts",
+                  "count": 2
+                }
+              ]
+            },
+            {
+              "who": "friend2",
+              "steps": [
+                {
+                  "wait": 0.4
+                },
+                {
+                  "play": "munch",
+                  "times": 2
+                },
+                {
+                  "effect": "hearts",
+                  "count": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "unwear": "pizza-slice",
+          "who": "star"
+        },
+        {
+          "unwear": "pizza-slice",
+          "who": "friend"
+        },
+        {
+          "unwear": "pizza-slice",
+          "who": "friend2"
+        },
+        {
+          "together": [
+            {
+              "who": "star",
+              "steps": [
+                {
+                  "pose": "cheer"
+                },
+                {
+                  "hop": true,
+                  "height": 8,
+                  "time": 0.4
+                },
+                {
+                  "pose": "stand"
+                }
+              ]
+            },
+            {
+              "who": "friend",
+              "steps": [
+                {
+                  "pose": "cheer"
+                },
+                {
+                  "hop": true,
+                  "height": 8,
+                  "time": 0.4
+                },
+                {
+                  "pose": "stand"
+                }
+              ]
+            },
+            {
+              "who": "friend2",
+              "steps": [
+                {
+                  "pose": "cheer"
+                },
+                {
+                  "hop": true,
+                  "height": 8,
+                  "time": 0.4
+                },
+                {
+                  "pose": "stand"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "say": "Best party ever.",
+          "time": 1.4
+        },
+        {
+          "prop": "pizza",
+          "frame": "closed"
+        },
+        {
+          "wait": 0.3
+        },
+        {
+          "effect": "stars",
+          "at": "pizza",
+          "count": 6
+        },
+        {
+          "prop": "pizza",
+          "hide": true
+        }
+      ]
+    },
     "puppet": {
       "title": "Take the Controls",
       "steps": [
@@ -1792,6 +2516,38 @@ enum BuiltInPack {
     {
       "sequence": "x",
       "run": "stretch"
+    },
+    {
+      "sequence": "e",
+      "run": "coffee-break"
+    },
+    {
+      "sequence": "g",
+      "run": "coffee-refill"
+    },
+    {
+      "sequence": "z",
+      "run": "pizza-party"
+    }
+  ],
+  "triggers": [
+    {
+      "at": "10:30",
+      "days": "weekdays",
+      "run": "coffee-break"
+    },
+    {
+      "every": "90m",
+      "if": "busy",
+      "run": "coffee-refill"
+    },
+    {
+      "when": "claude",
+      "event": "Stop",
+      "chance": 0.15,
+      "cooldown": "2h",
+      "delay": "4s",
+      "run": "pizza-party"
     }
   ]
 }

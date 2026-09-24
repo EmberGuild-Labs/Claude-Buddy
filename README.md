@@ -76,10 +76,14 @@ A tiny pixel-art Claude critter that lives along the bottom of your Mac's screen
   | `H` | **Secret handshake.** Only works when another buddy is around. |
   | `P` | **Take the controls.** ← → walk, ↑ jumps, `F` backflips, `C` cartwheels, `Esc` hands it back. |
   | `B` `W` `C` `M` `D` `R` `X` | Bow, wave, cartwheel, moonwalk, robot dance, roll around, stretch break |
+  | `E` | **Coffee break.** A coffee machine rises and brews, and the buddy sits sipping until you ⌥-click it. It also happens by itself at 10:30 on weekdays. |
+  | `G` | **Coffee refill.** Wanders off-screen and comes back with a steaming mug (sometimes one shot too many). It also happens every 90 minutes while Claude is working. |
+  | `Z` | **Pizza party.** A pizza box drops from the sky and the buddies share slices. It also happens now and then when a Claude session finishes. |
   | `Esc` | Stop whatever it's doing |
 
   - **Everything's in the menu.** Everything is also listed under **Extras → Tricks & Activities**. **Extras → Accessories** has a wizard hat, chef hat, headphones, sunglasses, a bow tie, a hero cape, and more.
   - **Make your own.** A **pack** is a JSON file that adds pixel-art accessories, animations, and scripted activities with props, speech bubbles, several buddies, and puppet controls. Packs can also add keyboard shortcuts and **triggers**: "at 14:30", "every 45 minutes on weekdays", "when I open Xcode", "when Claude finishes". Start with **Extras → Packs → Open Packs Folder**. The guide is [docs/PACKS.md](docs/PACKS.md), and [docs/example-pack.json](docs/example-pack.json) shows every feature.
+  - **Automatic treats.** Turn off the automatic coffee breaks, refills, and pizza with **Extras → Schedules & Triggers → Automatic Treats**.
   - **No special permissions.** The leader key only grabs the keys it needs, and only for 2.5 seconds after you press it.
 - **Light on resources.** Uses about 1% CPU. See "Performance" below.
 - Respects **Reduce Motion** (no flips or wobble, fewer hops).

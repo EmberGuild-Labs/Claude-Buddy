@@ -389,6 +389,9 @@ A position is a number or a string like `base+offset`, for example `"right-20"`,
   - `between`: a daily window like `09:00-17:00`. Windows past midnight work too, like `22:00-02:00`.
   - `cooldown`: the minimum time between firings.
   - `chance`: `0`–`1`.
+- **`delay`** waits before running, for example `"delay": "4s"` so a "Stop" trigger runs after the buddy's own celebration.
+- **`if`** checks a condition when it's time to run, the same ones `if` steps use. `{"every": "90m", "if": "busy", ...}` only runs while Claude is working.
+- **Built-in triggers.** The built-in pack has three automatic treats: a coffee break at 10:30 on weekdays, a coffee refill every 90 minutes while Claude is busy, and an occasional pizza party when a session finishes. Turn them off with **Extras → Schedules & Triggers → Automatic Treats**.
 - **Busy or hidden.** If the buddy is busy (another activity, a nap) or hidden, a trigger waits up to 2 minutes for it to be free.
 
 ## Tips

@@ -29,6 +29,11 @@ final class ExtrasController {
         get { defaults.stringArray(forKey: "ext.worn") ?? [] }
         set { defaults.set(newValue, forKey: "ext.worn") }
     }
+    /// The built-in pack's automatic treats (coffee break, pizza party, coffee refill).
+    var builtinTriggers: Bool {
+        get { defaults.object(forKey: "ext.builtinTriggers") as? Bool ?? true }
+        set { defaults.set(newValue, forKey: "ext.builtinTriggers") }
+    }
     var disabledPacks: Set<String> {
         get { Set(defaults.stringArray(forKey: "ext.disabledPacks") ?? []) }
         set { defaults.set(Array(newValue).sorted(), forKey: "ext.disabledPacks") }
@@ -42,7 +47,13 @@ final class ExtrasController {
         }
         leader.onEscape = { [weak self] in self?.stage.director.cancel() }
         leader.onDisplay = { [weak self] text in self?.stage.director.showHUD(text, for: text == "?" ? 1 : 3) }
-        triggersEngine.fire = { [weak self] t in self?.perform(t.action, label: "trigger", queueIfBusy: true) }
+        triggersEngine.fire = { [weak self] t in
+            DispatchQueue.main.asyncAfter(deadline: .now() + t.delay) {
+                guard let self else { return }
+                if let c = t.condition, !ExtrasConditions.evaluate(c, stage: self.stage) { return }
+                self.perform(t.action, label: "trigger", queueIfBusy: true)
+            }
+        }
     }
 
     func start() {
@@ -73,7 +84,7 @@ final class ExtrasController {
         sequenceActions = seqs.map(\.action)
         leader.matcher = SequenceMatcher(sequences: seqs.compactMap(\.sequence))
         registerLeader()
-        triggersEngine.triggers = catalog.triggers
+        triggersEngine.triggers = catalog.triggers.filter { builtinTriggers || $0.pack != "builtin" }
     }
 
     private func registerLeader() {
@@ -269,8 +280,14 @@ final class ExtrasController {
         menu.addItem(submenu(failedBindings.isEmpty ? "Shortcuts" : "Shortcuts ⚠︎", keysMenu))
 
         let trigMenu = NSMenu()
-        for t in catalog.triggers { trigMenu.addItem(info(Self.describe(t))) }
-        if trigMenu.items.isEmpty { trigMenu.addItem(info("None. Add “triggers” to a pack.")) }
+        trigMenu.addItem(BlockMenuItem("Automatic Treats (coffee, pizza)", on: builtinTriggers) { [weak self] in
+            guard let self else { return }
+            self.builtinTriggers.toggle()
+            self.reload()
+        })
+        trigMenu.addItem(.separator())
+        for t in catalog.triggers where builtinTriggers || t.pack != "builtin" { trigMenu.addItem(info(Self.describe(t))) }
+        if trigMenu.items.count == 2 { trigMenu.addItem(info("None. Add “triggers” to a pack.")) }
         menu.addItem(submenu("Schedules & Triggers", trigMenu))
 
         // Packs.
@@ -338,6 +355,7 @@ final class ExtrasController {
         }
         if let (s, e) = t.between { extra.append(String(format: "%d:%02d–%d:%02d", s / 60, s % 60, e / 60, e % 60)) }
         if t.chance < 1 { extra.append("\(Int(t.chance * 100))% chance") }
+        if let c = t.condition { extra.append("if \(c)") }
         let name = t.action.run.flatMap { ExtrasCatalog.current.activities[$0]?.title } ?? t.action.label
         return what + (extra.isEmpty ? "" : " (\(extra.joined(separator: ", ")))") + " → " + name
     }

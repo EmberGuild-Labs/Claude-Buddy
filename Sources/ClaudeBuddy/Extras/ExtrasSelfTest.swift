@@ -23,7 +23,7 @@ enum ExtrasSelfTest {
         let example = PackParser.parse(data: Data(ExamplePack.json.utf8), file: nil, fallbackID: "example")
         let withExample = ExtrasCatalog(packs: [BuiltInPack.load(), example])
         check("example pack has no problems", withExample.problems.isEmpty, withExample.problems.joined(separator: "\n  "))
-        check("example pack defines triggers and bindings", withExample.triggers.count == 7 && withExample.bindings.count > builtin.bindings.count,
+        check("example pack defines triggers and bindings", withExample.triggers.count == builtin.triggers.count + 7 && withExample.bindings.count > builtin.bindings.count,
               "triggers=\(withExample.triggers.count)")
 
         let broken = PackParser.parse(data: Data("{ nope".utf8), file: nil, fallbackID: "broken")
@@ -58,7 +58,7 @@ enum ExtrasSelfTest {
               loaded.packs.map(\.id) == ["builtin", "pngpack", "example"] && loaded.art["dot"]?.width == 2 && loaded.art["dot"]?.height == 3
                 && loaded.art["dot"]?.frames["default"]?[1, 0].a == 0 && loaded.accessories["dot-hat"] != nil && loaded.problems.isEmpty,
               "\(loaded.packs.map(\.id)) \(loaded.problems)")
-        check("a turned-off pack isn't loaded", ExtrasCatalog.load(from: folder, disabled: ["example"]).triggers.isEmpty)
+        check("a turned-off pack isn't loaded", ExtrasCatalog.load(from: folder, disabled: ["example"]).triggers.allSatisfy { $0.pack == "builtin" })
 
         // MARK: Positions, keys, sequences
         check("positions parse", PosExpr.parse("right-20") == PosExpr(base: "right", offset: -20)

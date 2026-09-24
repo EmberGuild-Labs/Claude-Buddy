@@ -285,6 +285,10 @@ struct TriggerDef: Equatable {
     var between: (Int, Int)?     // Minutes since midnight, start…end
     var cooldown: Double
     var chance: Double
+    /// Wait this long after the trigger fires (e.g. let the "finished" celebration play first).
+    var delay: Double = 0
+    /// A condition checked when it's time to run (`busy`, `not:music`, …), like an `if` step.
+    var condition: String?
     var action: ActionSpec
     var pack: String
     var index: Int
@@ -292,6 +296,7 @@ struct TriggerDef: Equatable {
     static func == (a: TriggerDef, b: TriggerDef) -> Bool {
         a.kind == b.kind && a.days == b.days && a.between?.0 == b.between?.0 && a.between?.1 == b.between?.1
             && a.cooldown == b.cooldown && a.chance == b.chance && a.action == b.action && a.pack == b.pack && a.index == b.index
+            && a.delay == b.delay && a.condition == b.condition
     }
 
     /// Stable across launches, for remembering "already fired today".
@@ -871,8 +876,16 @@ struct PackParser {
         case .claude: defaultCooldown = 30
         default: defaultCooldown = 0
         }
-        return TriggerDef(kind: kind, days: days, between: between, cooldown: Self.duration(d["cooldown"]) ?? defaultCooldown,
-                          chance: min(1, max(0, (d["chance"] as? NSNumber)?.doubleValue ?? 1)), action: action, pack: packID, index: index)
+        let condition = d["if"] as? String
+        if let condition, !ExtrasConditions.isKnown(condition) {
+            problem("\(ctx): if should be one of \(ExtrasConditions.names.joined(separator: ", ")) (or not:<name>).")
+            return nil
+        }
+        var t = TriggerDef(kind: kind, days: days, between: between, cooldown: Self.duration(d["cooldown"]) ?? defaultCooldown,
+                           chance: min(1, max(0, (d["chance"] as? NSNumber)?.doubleValue ?? 1)), action: action, pack: packID, index: index)
+        t.delay = max(0, Self.duration(d["delay"]) ?? 0)
+        t.condition = condition
+        return t
     }
 }
 
