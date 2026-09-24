@@ -126,6 +126,16 @@ final class OverlayController {
     }
 
     private var lastCovered = false
+    /// pid → bundle ID, so window scans don't look apps up every time.
+    private var bundleIDs: [pid_t: String] = [:]
+
+    private func bundleID(_ pid: pid_t) -> String? {
+        if let b = bundleIDs[pid] { return b }
+        guard let b = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier else { return nil }
+        if bundleIDs.count > 200 { bundleIDs.removeAll() }
+        bundleIDs[pid] = b
+        return b
+    }
 
     private struct WindowScan {
         var frontCovers = false
@@ -182,7 +192,7 @@ final class OverlayController {
             let local = segments.filter { $0.upperBound - $0.lowerBound >= 40 }
                 .map { ($0.lowerBound - ox)...($0.upperBound - ox) }
             if !local.isEmpty {
-                scan.platforms[number] = WindowPlatform(origin: CGPoint(x: rect.minX - ox, y: top - oy), segments: local)
+                scan.platforms[number] = WindowPlatform(origin: CGPoint(x: rect.minX - ox, y: top - oy), segments: local, owner: bundleID(pid))
             }
         }
         if frontPID == ourPID { scan.frontCovers = lastCovered }

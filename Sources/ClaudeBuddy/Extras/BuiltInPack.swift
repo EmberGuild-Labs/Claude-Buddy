@@ -242,6 +242,52 @@ enum BuiltInPack {
         "d": "bodyDark"
       }
     },
+    "loot": {
+      "frame": "doc",
+      "colors": {
+        "P": "#F4F1EA",
+        "p": "#C9C3B4",
+        "l": "#8A8F99",
+        "F": "#5B9BE8",
+        "f": "#3F78C8",
+        "S": "#8FD0FF",
+        "m": "#3BA55C",
+        "y": "#FFD447",
+        "k": "#2B1B16"
+      },
+      "frames": {
+        "doc": [
+          "PPPPP..",
+          "PPPPPp.",
+          "PlllPPp",
+          "PPPPPPP",
+          "PllllPP",
+          "PPPPPPP",
+          "PlllllP",
+          "PPPPPPP",
+          "ppppppp"
+        ],
+        "folder": [
+          "ffff......",
+          "FFFFffffff",
+          "FFFFFFFFFF",
+          "FFFFFFFFFF",
+          "FFFFFFFFFF",
+          "FFFFFFFFFF",
+          "FFFFFFFFFF",
+          "ffffffffff"
+        ],
+        "photo": [
+          "kkkkkkkkk",
+          "kSSSSySSk",
+          "kSSSSSSSk",
+          "kSSmSSSSk",
+          "kSmmmSmSk",
+          "kmmmmmmmk",
+          "kkkkkkkkk"
+        ]
+      }
+    },
     "coffee-machine": {
       "frames": {
         "idle": [
@@ -520,6 +566,25 @@ enum BuiltInPack {
         "MMMM.M",
         "MMMMMM",
         "mmmm.."
+      ]
+    },
+    "phone": {
+      "title": "Phone",
+      "slot": "held",
+      "offset": [
+        1,
+        0
+      ],
+      "colors": {
+        "K": "#23252B",
+        "S": "#8FD0FF"
+      },
+      "rows": [
+        "KKKK",
+        "KSSK",
+        "KSSK",
+        "KSSK",
+        "KKKK"
       ]
     },
     "pizza-slice": {
@@ -896,6 +961,92 @@ enum BuiltInPack {
           "eyes": "wide",
           "arms": "up",
           "time": 0.05
+        }
+      ]
+    },
+    "sneak": {
+      "loop": true,
+      "frames": [
+        {
+          "legs": "stepA",
+          "eyes": "wide",
+          "look": -1,
+          "time": 0.3
+        },
+        {
+          "legs": "stand",
+          "eyes": "wide",
+          "look": 1,
+          "time": 0.3
+        },
+        {
+          "legs": "stepB",
+          "eyes": "wide",
+          "look": -1,
+          "time": 0.3
+        },
+        {
+          "legs": "stand",
+          "eyes": "wide",
+          "look": 1,
+          "time": 0.3
+        }
+      ]
+    },
+    "buzz": {
+      "frames": [
+        {
+          "dx": -1,
+          "eyes": "wide",
+          "arms": "holdOut",
+          "time": 0.05
+        },
+        {
+          "dx": 1,
+          "eyes": "wide",
+          "arms": "holdOut",
+          "time": 0.05
+        },
+        {
+          "dx": -1,
+          "eyes": "wide",
+          "arms": "holdOut",
+          "time": 0.05
+        },
+        {
+          "dx": 1,
+          "eyes": "wide",
+          "arms": "holdOut",
+          "time": 0.05
+        },
+        {
+          "dx": -1,
+          "eyes": "wide",
+          "arms": "holdOut",
+          "time": 0.05
+        },
+        {
+          "dx": 1,
+          "eyes": "wide",
+          "arms": "holdOut",
+          "time": 0.05
+        },
+        {
+          "dx": -1,
+          "eyes": "wide",
+          "arms": "holdOut",
+          "time": 0.05
+        },
+        {
+          "dx": 1,
+          "eyes": "wide",
+          "arms": "holdOut",
+          "time": 0.05
+        },
+        {
+          "eyes": "happy",
+          "arms": "holdOut",
+          "time": 0.3
         }
       ]
     },
@@ -2412,6 +2563,235 @@ enum BuiltInPack {
         }
       ]
     },
+    "file-heist": {
+      "title": "File Heist (pretend)",
+      "stayOnWindows": true,
+      "cast": [
+        {
+          "role": "thief",
+          "who": "any"
+        }
+      ],
+      "props": {
+        "loot": {
+          "art": "loot",
+          "z": "front"
+        }
+      },
+      "steps": [
+        {
+          "face": "left"
+        },
+        {
+          "pose": "surprised"
+        },
+        {
+          "wait": 0.5
+        },
+        {
+          "face": "right"
+        },
+        {
+          "wait": 0.5
+        },
+        {
+          "pose": "stand"
+        },
+        {
+          "say": "Ooh... files.",
+          "time": 1.2
+        },
+        {
+          "walk": "here+6",
+          "speed": 8,
+          "clip": "sneak"
+        },
+        {
+          "random": [
+            [
+              {
+                "prop": "loot",
+                "frame": "doc"
+              }
+            ],
+            [
+              {
+                "prop": "loot",
+                "frame": "folder"
+              }
+            ],
+            [
+              {
+                "prop": "loot",
+                "frame": "photo"
+              }
+            ]
+          ]
+        },
+        {
+          "prop": "loot",
+          "show": {
+            "x": "here+14",
+            "y": "here"
+          }
+        },
+        {
+          "prop": "loot",
+          "move": {
+            "x": "here",
+            "y": "here+11"
+          },
+          "time": 0.35,
+          "ease": "out"
+        },
+        {
+          "prop": "loot",
+          "follow": "thief",
+          "offset": {
+            "x": 0,
+            "y": 11
+          }
+        },
+        {
+          "pose": {
+            "arms": "up",
+            "eyes": "happy"
+          }
+        },
+        {
+          "say": "Yoink!",
+          "time": 0.8
+        },
+        {
+          "random": [
+            [
+              {
+                "face": "left"
+              },
+              {
+                "hop": {
+                  "x": "here-24",
+                  "y": "floor"
+                },
+                "height": 16,
+                "time": 0.6
+              },
+              {
+                "run": "offleft",
+                "speed": 95
+              }
+            ],
+            [
+              {
+                "face": "right"
+              },
+              {
+                "hop": {
+                  "x": "here+24",
+                  "y": "floor"
+                },
+                "height": 16,
+                "time": 0.6
+              },
+              {
+                "run": "offright",
+                "speed": 95
+              }
+            ]
+          ]
+        },
+        {
+          "wait": 2.5
+        },
+        {
+          "walk": "start",
+          "speed": 50
+        },
+        {
+          "face": "cursor"
+        },
+        {
+          "pose": "stand"
+        },
+        {
+          "say": "Just kidding! Putting it back.",
+          "time": 1.8
+        },
+        {
+          "prop": "loot",
+          "follow": null
+        },
+        {
+          "prop": "loot",
+          "move": {
+            "x": "start+14",
+            "y": "start"
+          },
+          "time": 0.9,
+          "ease": "out"
+        },
+        {
+          "effect": "sparkle",
+          "at": "loot",
+          "count": 5
+        },
+        {
+          "prop": "loot",
+          "hide": true
+        },
+        {
+          "say": "Your files never left.",
+          "time": 1.6
+        }
+      ]
+    },
+    "new-text": {
+      "title": "New Text",
+      "menu": false,
+      "vars": {
+        "count": "a",
+        "s": ""
+      },
+      "steps": [
+        {
+          "face": "cursor"
+        },
+        {
+          "wear": "phone"
+        },
+        {
+          "play": "buzz"
+        },
+        {
+          "play": "buzz"
+        },
+        {
+          "say": "You got {count} new text{s}!",
+          "time": 2.2,
+          "async": true
+        },
+        {
+          "effect": "sparkle",
+          "count": 4
+        },
+        {
+          "waitFor": "click",
+          "timeout": 7,
+          "then": [
+            {
+              "say": "Opening Messages!",
+              "time": 1
+            },
+            {
+              "openApp": "com.apple.MobileSMS"
+            }
+          ]
+        },
+        {
+          "unwear": "phone"
+        }
+      ]
+    },
     "puppet": {
       "title": "Take the Controls",
       "steps": [
@@ -2528,6 +2908,14 @@ enum BuiltInPack {
     {
       "sequence": "z",
       "run": "pizza-party"
+    },
+    {
+      "sequence": "l",
+      "run": "file-heist"
+    },
+    {
+      "sequence": "n",
+      "run": "new-text"
     }
   ],
   "triggers": [
@@ -2548,6 +2936,17 @@ enum BuiltInPack {
       "cooldown": "2h",
       "delay": "4s",
       "run": "pizza-party"
+    },
+    {
+      "when": "on-window",
+      "app": "Finder",
+      "chance": 0.35,
+      "cooldown": "20m",
+      "run": "file-heist"
+    },
+    {
+      "when": "new-text",
+      "run": "new-text"
     }
   ]
 }

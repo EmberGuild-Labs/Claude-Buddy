@@ -212,12 +212,14 @@ indirect enum Step: Equatable {
     case wear(who: String?, String, Bool)
     case together([Track])
     case loop([Step], times: Int?, until: [Condition], seconds: Double?)
-    case waitFor([Condition], timeout: Double?, orElse: [Step])
+    case waitFor([Condition], timeout: Double?, then: [Step], orElse: [Step])
     case random([[Step]])
     case call(String)
     case puppet(who: String?, PuppetSpec)
     case leave(who: String?)
     case when(String, then: [Step], orElse: [Step])
+    /// Launches (or brings forward) an app by bundle ID or name. Never opens files or URLs.
+    case openApp(String)
     /// Runs in the background while the script moves on.
     case async(Step)
 }
@@ -251,6 +253,10 @@ struct ActivityDef: Equatable {
     /// End with a little wave (default) or go straight back to normal.
     var greetAtEnd: Bool
     var pack: String
+    /// Start where the buddy is (e.g. up on a window ledge) instead of hopping down to the floor first.
+    var stayOnWindows = false
+    /// Default words for `{placeholders}` in `say` text (a trigger's own values win).
+    var vars: [String: String] = [:]
 
     var starRole: String { cast.first?.name ?? "star" }
 }
@@ -279,6 +285,10 @@ struct TriggerDef: Equatable {
         case startup
         case wake
         case claude(event: String, tool: String?)
+        /// An idle buddy is standing on a window of this app.
+        case onWindow(app: String)
+        /// New incoming text messages (needs the opt-in Messages watcher).
+        case newText
     }
     var kind: Kind
     var days: Set<Int>?          // Calendar weekdays, 1 = Sunday
@@ -586,8 +596,11 @@ struct PackParser {
             props[name] = PropSpec(art: artName, z: zValue(pd["z"]) ?? -1)
         }
         let steps = self.steps(rawSteps, context: ctx)
-        return ActivityDef(id: id, title: d["title"] as? String ?? id, cast: cast, props: props, steps: steps,
-                           inMenu: d["menu"] as? Bool ?? true, greetAtEnd: (d["endWith"] as? String ?? "wave") != "none", pack: packID)
+        var def = ActivityDef(id: id, title: d["title"] as? String ?? id, cast: cast, props: props, steps: steps,
+                              inMenu: d["menu"] as? Bool ?? true, greetAtEnd: (d["endWith"] as? String ?? "wave") != "none", pack: packID)
+        def.stayOnWindows = d["stayOnWindows"] as? Bool ?? false
+        def.vars = d["vars"] as? [String: String] ?? [:]
+        return def
     }
 
     private func zValue(_ any: Any?) -> Double? {
@@ -606,7 +619,7 @@ struct PackParser {
 
     private static let actionKeys = ["walk", "run", "hop", "place", "face", "pose", "play", "stop", "wait", "hide", "show", "say",
                                      "effect", "prop", "ride", "wear", "unwear", "together", "loop", "waitFor", "random", "call",
-                                     "puppet", "leave", "if"]
+                                     "puppet", "leave", "if", "openApp"]
 
     private mutating func step(_ any: Any, context ctx: String) -> Step? {
         guard let d = any as? [String: Any] else { problem("\(ctx): should be an object like {\"walk\": \"center\"}."); return nil }
@@ -678,7 +691,8 @@ struct PackParser {
             result = .loop(steps(list, context: ctx), times: times, until: until, seconds: num("for"))
         case "waitFor":
             guard let c = Condition.parseList(d["waitFor"]) else { problem("\(ctx): waitFor should be click, click:<role>, key:<name>, again, never, or a list of those."); return nil }
-            result = .waitFor(c, timeout: num("timeout"), orElse: steps(d["else"] as? [Any] ?? [], context: ctx + " else"))
+            result = .waitFor(c, timeout: num("timeout"), then: steps(d["then"] as? [Any] ?? [], context: ctx + " then"),
+                              orElse: steps(d["else"] as? [Any] ?? [], context: ctx + " else"))
         case "random":
             guard let options = d["random"] as? [Any], !options.isEmpty else { problem("\(ctx): random needs a list of choices."); return nil }
             result = .random(options.enumerated().map { i, o in
@@ -707,6 +721,9 @@ struct PackParser {
             result = .puppet(who: who, spec)
         case "leave":
             result = .leave(who: who)
+        case "openApp":
+            guard let app = d["openApp"] as? String, !app.isEmpty else { problem("\(ctx): openApp needs an app name or bundle ID."); return nil }
+            result = .openApp(app)
         case "if":
             guard let cond = d["if"] as? String, ExtrasConditions.isKnown(cond) else {
                 problem("\(ctx): if should be one of \(ExtrasConditions.names.joined(separator: ", ")) (or not:<name>).")
@@ -836,13 +853,17 @@ struct PackParser {
             case "app-open", "app-launch", "app-activate", "app-quit":
                 guard let app = d["app"] as? String, !app.isEmpty else { problem("\(ctx): \(when) needs “app” (a name like \"Xcode\" or a bundle ID)."); return nil }
                 kind = .app(event: when, match: app)
+            case "on-window":
+                guard let app = d["app"] as? String, !app.isEmpty else { problem("\(ctx): on-window needs “app” (like \"Finder\")."); return nil }
+                kind = .onWindow(app: app)
+            case "new-text": kind = .newText
             case "startup": kind = .startup
             case "wake": kind = .wake
             case "claude":
                 guard let e = d["event"] as? String else { problem("\(ctx): claude triggers need “event” (like \"Stop\")."); return nil }
                 kind = .claude(event: e, tool: d["tool"] as? String)
             default:
-                problem("\(ctx): when should be app-open, app-launch, app-activate, app-quit, startup, wake, or claude.")
+                problem("\(ctx): when should be app-open, app-launch, app-activate, app-quit, on-window, new-text, startup, wake, or claude.")
                 return nil
             }
         }
@@ -874,6 +895,7 @@ struct PackParser {
         switch kind {
         case .app(let e, _) where e == "app-activate" || e == "app-open": defaultCooldown = 600
         case .claude: defaultCooldown = 30
+        case .onWindow: defaultCooldown = 900
         default: defaultCooldown = 0
         }
         let condition = d["if"] as? String

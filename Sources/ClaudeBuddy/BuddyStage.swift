@@ -7,6 +7,8 @@ struct WindowPlatform {
     let origin: CGPoint
     /// The parts of the top edge not covered by windows in front of it.
     let segments: [ClosedRange<CGFloat>]
+    /// Bundle ID of the app that owns the window (for Extras triggers like "on a Finder window").
+    var owner: String? = nil
 }
 
 /// The whole screen, where the buddies live: on the floor (Dock or screen bottom) and on

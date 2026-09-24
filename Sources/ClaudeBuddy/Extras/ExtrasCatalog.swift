@@ -151,7 +151,10 @@ final class ExtrasCatalog {
     /// Problems with steps sent over HTTP (their only role is "star", and there are no props).
     func issues(inAdHoc steps: [Step]) -> [String] {
         var out: [String] = []
-        forEachStep(steps) { out += check($0, roles: ["star"], props: []) }
+        forEachStep(steps) { step in
+            out += check(step, roles: ["star"], props: [])
+            if case .openApp = step { out.append("openApp isn't allowed over HTTP; put it in a pack") }
+        }
         return out
     }
 
@@ -231,11 +234,11 @@ final class ExtrasCatalog {
             role(who)
             if accessories[acc] == nil { out.append("accessory “\(acc)” doesn't exist") }
         case .loop(_, _, let until, _): condition(until)
-        case .waitFor(let c, _, _): condition(c)
+        case .waitFor(let c, _, _, _): condition(c)
         case .call(let id): if activities[id] == nil { out.append("calls “\(id)”, which doesn't exist") }
         case .puppet(let who, _): role(who)
         case .together(let tracks): tracks.forEach { role($0.who) }
-        case .wait, .random, .when, .async: break
+        case .wait, .random, .when, .async, .openApp: break
         }
         return out
     }
@@ -252,7 +255,7 @@ final class ExtrasCatalog {
             switch s {
             case .together(let tracks): tracks.forEach { forEachStep($0.steps, visit) }
             case .loop(let inner, _, _, _): forEachStep(inner, visit)
-            case .waitFor(_, _, let e): forEachStep(e, visit)
+            case .waitFor(_, _, let t, let e): forEachStep(t, visit); forEachStep(e, visit)
             case .random(let choices): choices.forEach { forEachStep($0, visit) }
             case .when(_, let a, let b): forEachStep(a, visit); forEachStep(b, visit)
             case .async(let inner): forEachStep([inner], visit)

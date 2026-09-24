@@ -1,5 +1,6 @@
 import AppKit
 import Carbon.HIToolbox
+import SQLite3
 
 /// Extras checks for `--self-test`: pack parsing, the script engine (every built-in activity is
 /// run start to finish on a fake clock), keys and sequences, triggers, and the HTTP endpoint.
@@ -115,6 +116,7 @@ enum ExtrasSelfTest {
         window.contentView = stage
         stage.isRunning = false
         stage.director.grabsRealKeys = false
+        stage.director.opensApps = false
         let director = stage.director
         func simulate(_ seconds: Double, until done: () -> Bool = { false }) {
             for _ in 0..<Int(seconds * 30) {
@@ -211,6 +213,71 @@ enum ExtrasSelfTest {
         simulate(3)
         check("everyone is back to normal", !main.isScripted && main.pos.y == stage.groundY)
 
+        // The Finder heist: a buddy up on a Finder window gets the idea; it's all pretend.
+        let heistPack = PackParser.parse(data: Data(#"{"id": "t", "triggers": [{"when": "on-window", "app": "Finder", "run": "file-heist"}]}"#.utf8),
+                                         file: nil, fallbackID: "t")
+        let heistController = ExtrasController(stage: stage)
+        heistController.useTriggers(ExtrasCatalog(packs: [BuiltInPack.load(), heistPack]).triggers)
+        stage.windowPlatforms = [7: WindowPlatform(origin: CGPoint(x: 0, y: 400), segments: [0...1440], owner: "com.apple.finder")]
+        let climber = stage.summonGuest(hat: .topHat)!
+        climber.isGuest = false  // Like a session buddy: it stays afterwards.
+        simulate(4, until: { climber.platform == 7 && climber.canJoinGame })
+        heistController.checkWindows()
+        simulate(0.5)
+        let heist = director.performance
+        let thief = heist?.actors["thief"]
+        check("a buddy on a Finder window starts the heist, right there on the window",
+              heist?.def.id == "file-heist" && thief?.buddy === climber && abs((thief?.startY ?? 0) - 400) < 1,
+              "activity=\(director.currentID ?? "none") y=\(thief?.startY ?? -1)")
+        var sawLoot = false
+        simulate(40) {
+            if director.performance?.props["loot"]?.visible == true { sawLoot = true }
+            return !director.isActive
+        }
+        simulate(1)
+        check("the heist grabs a pretend file, runs off, and brings it back", sawLoot && !director.isActive && !climber.isScripted
+              && climber.pos.y == stage.groundY)
+        heistController.checkWindows()
+        check("no heist when nobody's on a Finder window", !director.isActive)
+        stage.windowPlatforms = [:]
+        climber.beginLeaving()
+        simulate(10)
+
+        // New texts: {placeholders} and click-to-open.
+        director.start(builtin.activities["new-text"]!, vars: ["count": "3", "s": "s"])
+        simulate(3)
+        check("the text alert fills in the count", director.performance?.actors["star"]?.sayText == "You got 3 new texts!",
+              director.performance?.actors["star"]?.sayText ?? "nil")
+        director.clicked(main)
+        simulate(10, until: { !director.isActive })
+        check("clicking the text alert opens Messages", director.openedApps.last == "com.apple.MobileSMS")
+        director.start("new-text")
+        simulate(3)
+        check("placeholders fall back to the activity's defaults", director.performance?.actors["star"]?.sayText == "You got a new text!")
+        director.cancel()
+        simulate(2)
+
+        // The Messages watcher, against a pretend Messages database.
+        let dbURL = folder.appendingPathComponent("chat.db")
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        func sql(_ statement: String) {
+            var db: OpaquePointer?
+            sqlite3_open(dbURL.path, &db)
+            sqlite3_exec(db, statement, nil, nil, nil)
+            sqlite3_close(db)
+        }
+        sql("CREATE TABLE message (ROWID INTEGER PRIMARY KEY AUTOINCREMENT, is_from_me INTEGER, is_read INTEGER, text TEXT);"
+            + "INSERT INTO message (is_from_me, is_read) VALUES (0, 1), (0, 0), (1, 1);")
+        let watcher = MessagesWatcher(database: dbURL)
+        let first = watcher.check()
+        sql("INSERT INTO message (is_from_me, is_read) VALUES (0, 0), (1, 1), (0, 0);")
+        let second = watcher.check()
+        let third = watcher.check()
+        check("the text watcher counts only new incoming messages", first == (.ok, 0) && second == (.ok, 2) && third == (.ok, 0),
+              "\(first) \(second) \(third)")
+        check("the text watcher says when it can't read Messages",
+              MessagesWatcher(database: folder.appendingPathComponent("nope.db")).check().access == .unavailable)
+
         // MARK: HTTP
         let extras = ExtrasController(stage: stage)
         func post(_ json: String) -> Int { extras.handle(method: "POST", path: "/claude-buddy/do", body: Data(json.utf8))?.0 ?? 0 }
@@ -231,7 +298,7 @@ enum ExtrasSelfTest {
         engine.defaults = defaults
         engine.triggers = withExample.triggers
         var fired: [String] = []
-        engine.fire = { fired.append($0.action.run ?? $0.action.say ?? "?") }
+        engine.fire = { t, _ in fired.append(t.action.run ?? t.action.say ?? "?") }
         let cal = Calendar.current
         func date(_ weekday: Int, _ h: Int, _ m: Int) -> Date {
             // A date in a known week: 2026-09-20 is a Sunday (weekday 1).

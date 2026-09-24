@@ -10,6 +10,10 @@ final class ActivityDirector {
     var catalog: ExtrasCatalog { ExtrasCatalog.current }
     /// Real system-wide key grabs for `waitFor key:…` and puppet mode (off in the self-test).
     var grabsRealKeys = true
+    /// `openApp` steps really launch apps (off in the self-test and `--film`).
+    var opensApps = true
+    /// Apps an `openApp` step asked for (for tests).
+    private(set) var openedApps: [String] = []
     /// Called when an activity ends (finished or cancelled), with its id.
     var onEnd: ((String) -> Void)?
 
@@ -71,8 +75,10 @@ final class ActivityDirector {
         return start(def)
     }
 
+    /// `preferred`: the buddy a trigger was about (e.g. the one on a Finder window) plays the
+    /// first `any`/`other` role if it's free. `vars` fill `{placeholders}` in `say` text.
     @discardableResult
-    func start(_ def: ActivityDef) -> StartResult {
+    func start(_ def: ActivityDef, preferred: Buddy? = nil, vars: [String: String] = [:]) -> StartResult {
         if let p = performance {
             if p.def.id == def.id {
                 p.signal(.again)
@@ -91,8 +97,10 @@ final class ActivityDirector {
             let pick: Buddy?
             switch role.who {
             case .main: pick = free.first(where: \.isMain)
-            case .other: pick = nearestToMain(free.filter { !$0.isMain })
-            case .any: pick = free.first(where: \.isMain) ?? nearestToMain(free)
+            case .other:
+                pick = preferred.flatMap { p in free.first { $0 === p && !$0.isMain } } ?? nearestToMain(free.filter { !$0.isMain })
+            case .any:
+                pick = preferred.flatMap { p in free.first { $0 === p } } ?? free.first(where: \.isMain) ?? nearestToMain(free)
             }
             if let pick {
                 actors[role.name] = pick
@@ -113,7 +121,7 @@ final class ActivityDirector {
             let hat = role.hat ?? Hat.sessionPool.first { !usedHats.contains($0) } ?? .party
             if let g = stage.summonGuest(hat: hat) { actors[name] = g }
         }
-        performance = Performance(def: def, director: self, buddies: actors)
+        performance = Performance(def: def, director: self, buddies: actors, vars: vars)
         return .started
     }
 
@@ -198,6 +206,21 @@ final class ActivityDirector {
     }
 
     fileprivate func release(_ id: UInt32) { KeyGrabber.shared.release(id) }
+
+    fileprivate func openApp(_ app: String) {
+        openedApps.append(app)
+        guard opensApps else { return }
+        let ws = NSWorkspace.shared
+        var url = ws.urlForApplication(withBundleIdentifier: app)
+        if url == nil {
+            let name = app.hasSuffix(".app") ? app : app + ".app"
+            url = ["/Applications", "/System/Applications", "/System/Applications/Utilities"]
+                .map { URL(fileURLWithPath: $0).appendingPathComponent(name) }
+                .first { FileManager.default.fileExists(atPath: $0.path) }
+        }
+        guard let url else { return }
+        ws.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+    }
 }
 
 // MARK: - Performance
@@ -215,6 +238,7 @@ final class CastMember {
     var x: CGFloat
     var y: CGFloat
     var startX: CGFloat
+    var startY: CGFloat
     var facing: CGFloat
     var basePose = PoseSpec()
     var clip: Clip?
@@ -239,6 +263,7 @@ final class CastMember {
         x = buddy.pos.x
         y = buddy.pos.y
         startX = x
+        startY = y
         facing = buddy.facing
         bubble.actions = BuddyStage.noActions
         bubble.magnificationFilter = .nearest
@@ -291,14 +316,17 @@ final class Performance {
     private(set) var heldKeys: Set<String> = []
     private var grabs: [String: (id: UInt32?, count: Int)] = [:]
     var clock: TimeInterval = 0
+    /// Fills `{placeholders}` in `say` text: {count}, {s}, {app}, {project}, {tool}, …
+    let vars: [String: String]
 
     var stage: BuddyStage { director.stage }
     var P: CGFloat { stage.pixel }
     var catalog: ExtrasCatalog { director.catalog }
 
-    init(def: ActivityDef, director: ActivityDirector, buddies: [String: Buddy]) {
+    init(def: ActivityDef, director: ActivityDirector, buddies: [String: Buddy], vars: [String: String] = [:]) {
         self.def = def
         self.director = director
+        self.vars = def.vars.merging(vars) { $1 }
         for (role, b) in buddies { actors[role] = CastMember(buddy: b, role: role) }
         // Props from this activity and anything it calls.
         var specs = def.props
@@ -321,7 +349,7 @@ final class Performance {
         }
         for a in actors.values {
             director.host?.addSublayer(a.bubble)
-            a.buddy.comeDownToFloor()
+            if !def.stayOnWindows { a.buddy.comeDownToFloor() }
         }
     }
 
@@ -381,13 +409,14 @@ final class Performance {
         if casting {
             castingTime += dt
             // Wait for guests to land and window-sitters to hop down (but not forever).
-            let ready = actors.values.allSatisfy { $0.buddy.isSettled && ($0.buddy.platform == 0 || castingTime > 4) }
+            let ready = actors.values.allSatisfy { $0.buddy.isSettled && ($0.buddy.platform == 0 || def.stayOnWindows || castingTime > 4) }
             guard ready || castingTime > 6 else { return false }
             for a in actors.values {
                 a.buddy.beginScript()
                 a.x = a.buddy.pos.x
-                a.y = stage.groundY
+                a.y = def.stayOnWindows ? a.buddy.pos.y : stage.groundY
                 a.startX = a.x
+                a.startY = a.y
                 a.facing = a.buddy.facing
             }
             casting = false
@@ -413,6 +442,12 @@ final class Performance {
         }
         layout()
         return root.done
+    }
+
+    func fill(_ text: String) -> String {
+        var out = text
+        for (k, v) in vars { out = out.replacingOccurrences(of: "{\(k)}", with: v) }
+        return out
     }
 
     func spawn(_ steps: [Step], who: String?) {
@@ -466,7 +501,8 @@ final class Performance {
         guard let base = e.base else { return floor + off }
         if base.hasSuffix("%"), let v = Double(base.dropLast()) { return stage.bounds.height * CGFloat(v) / 100 + off }
         switch base {
-        case "floor", "ground", "start": return floor + off
+        case "floor", "ground": return floor + off
+        case "start": return (a?.startY ?? floor) + off
         case "top": return stage.bounds.height + off
         case "here": return (a?.y ?? floor) + off
         case "cursor": return (stage.mouse?.y ?? floor) + off
@@ -836,7 +872,7 @@ final class TrackRun {
             actor(who)?.hidden = hide
         case .say(let who, let text, let time):
             guard let a = actor(who) else { return nil }
-            a.sayText = text
+            a.sayText = perf.fill(text)
             a.sayUntil = perf.clock + time
             return WaitRun(seconds: time)
         case .effect(let fx, let at):
@@ -858,8 +894,8 @@ final class TrackRun {
             return TogetherRun(tracks: tracks.map { TrackRun(steps: $0.steps, who: $0.who ?? who, perf: perf) })
         case .loop(let steps, let times, let until, let seconds):
             pushLoop(steps, times: times, until: until, seconds: seconds)
-        case .waitFor(let c, let timeout, let orElse):
-            return WaitForRun(conditions: c, timeout: timeout, orElse: orElse, perf: perf)
+        case .waitFor(let c, let timeout, let then, let orElse):
+            return WaitForRun(conditions: c, timeout: timeout, then: then, orElse: orElse, perf: perf)
         case .random(let choices):
             if let pick = choices.randomElement() { push(pick) }
         case .call(let id):
@@ -873,6 +909,8 @@ final class TrackRun {
             push(ExtrasConditions.evaluate(cond, stage: perf.stage) ? a : b)
         case .async(let inner):
             perf.spawn([inner], who: who)
+        case .openApp(let app):
+            perf.director.openApp(app)
         }
         return nil
     }
@@ -1044,14 +1082,16 @@ final class TogetherRun: StepRun {
 final class WaitForRun: StepRun {
     let conditions: [Condition]
     let timeout: TimeInterval?
+    let then: [Step]
     let orElse: [Step]
     unowned let perf: Performance
     private var t: TimeInterval = 0
     private var released = false
 
-    init(conditions: [Condition], timeout: TimeInterval?, orElse: [Step], perf: Performance) {
+    init(conditions: [Condition], timeout: TimeInterval?, then: [Step], orElse: [Step], perf: Performance) {
         self.conditions = conditions
         self.timeout = timeout
+        self.then = then
         self.orElse = orElse
         self.perf = perf
         for c in conditions { if case .key(let k) = c { perf.grabKey(k) } }
@@ -1059,7 +1099,11 @@ final class WaitForRun: StepRun {
 
     func tick(_ dt: TimeInterval, _ track: TrackRun) -> Bool {
         t += dt
-        if conditions.contains(where: perf.matches) { release(); return true }
+        if conditions.contains(where: perf.matches) {
+            release()
+            if !then.isEmpty { track.push(then) }
+            return true
+        }
         if let timeout, t >= timeout {
             release()
             if !orElse.isEmpty { track.push(orElse) }

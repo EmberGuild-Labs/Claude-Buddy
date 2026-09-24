@@ -82,10 +82,21 @@ enum ExtrasPreview {
         window.contentView = stage
         stage.isRunning = false
         stage.director.grabsRealKeys = false
+        stage.director.opensApps = false
         stage.layer?.backgroundColor = CGColor(srgbRed: 0.23, green: 0.25, blue: 0.3, alpha: 1)
         let step = 1.0 / 30
         for _ in 0..<60 { stage.advance(step) }
-        let result = stage.director.start(id)
+        // Activities that start on a window get a pretend Finder window, with a buddy dropped onto it.
+        var preferred: Buddy?
+        if ExtrasCatalog.current.activities[id]?.stayOnWindows == true {
+            stage.windowsEnabled = true
+            stage.windowPlatforms = [1: WindowPlatform(origin: CGPoint(x: 180, y: 120), segments: [180...560], owner: "com.apple.finder")]
+            stage.layer?.addSublayer(fakeWindow(CGRect(x: 180, y: 40, width: 380, height: 80)))
+            preferred = stage.summonGuest(hat: .topHat)
+            if let g = preferred { g.isGuest = false }
+            for _ in 0..<90 { stage.advance(step) }
+        }
+        let result = stage.director.start(ExtrasCatalog.current.activities[id] ?? ActivityDef(id: id, title: id, cast: [], props: [:], steps: [], inMenu: false, greetAtEnd: false, pack: ""), preferred: preferred)
         guard result == .started else { print("Couldn't start \(id): \(result)"); return }
 
         var frames: [CGImage] = []
@@ -122,6 +133,19 @@ enum ExtrasPreview {
             print("Wrote \(frames.count) frames of \(id) (\(String(format: "%.1f", t)) s) to \(url.path)")
         }
         _ = window
+    }
+
+    private static func fakeWindow(_ r: CGRect) -> CALayer {
+        let l = CALayer()
+        l.frame = r
+        l.backgroundColor = CGColor(gray: 0.92, alpha: 1)
+        l.cornerRadius = 6
+        l.zPosition = -5
+        let bar = CALayer()
+        bar.frame = CGRect(x: 0, y: r.height - 14, width: r.width, height: 14)
+        bar.backgroundColor = CGColor(gray: 0.8, alpha: 1)
+        l.addSublayer(bar)
+        return l
     }
 
     private static func snapshot(_ stage: BuddyStage) -> CGImage? {

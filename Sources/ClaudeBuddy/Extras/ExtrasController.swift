@@ -13,7 +13,9 @@ final class ExtrasController {
     /// Shortcuts another app already owns.
     private(set) var failedBindings: [String] = []
     private var sequenceActions: [ActionSpec] = []
-    private var pending: [(action: ActionSpec, label: String, expires: Date)] = []
+    private var pending: [(action: ActionSpec, label: String, expires: Date, context: TriggerContext)] = []
+    let messages = MessagesWatcher()
+    private var appNames: [String: String] = [:]
     private var queueTimer: Timer?
     private var adHocCount = 0
     /// False while the buddy is hidden: triggers wait instead of running unseen.
@@ -34,6 +36,11 @@ final class ExtrasController {
         get { defaults.object(forKey: "ext.builtinTriggers") as? Bool ?? true }
         set { defaults.set(newValue, forKey: "ext.builtinTriggers") }
     }
+    /// Opt-in: watch the Messages database for new texts (needs Full Disk Access).
+    var watchTexts: Bool {
+        get { defaults.bool(forKey: "ext.watchTexts") }
+        set { defaults.set(newValue, forKey: "ext.watchTexts") }
+    }
     var disabledPacks: Set<String> {
         get { Set(defaults.stringArray(forKey: "ext.disabledPacks") ?? []) }
         set { defaults.set(Array(newValue).sorted(), forKey: "ext.disabledPacks") }
@@ -47,19 +54,70 @@ final class ExtrasController {
         }
         leader.onEscape = { [weak self] in self?.stage.director.cancel() }
         leader.onDisplay = { [weak self] text in self?.stage.director.showHUD(text, for: text == "?" ? 1 : 3) }
-        triggersEngine.fire = { [weak self] t in
-            DispatchQueue.main.asyncAfter(deadline: .now() + t.delay) {
+        triggersEngine.fire = { [weak self] t, context in
+            let run = {
                 guard let self else { return }
                 if let c = t.condition, !ExtrasConditions.evaluate(c, stage: self.stage) { return }
-                self.perform(t.action, label: "trigger", queueIfBusy: true)
+                self.perform(t.action, label: "trigger", queueIfBusy: true, context: context)
             }
+            if t.delay > 0 { DispatchQueue.main.asyncAfter(deadline: .now() + t.delay, execute: run) } else { run() }
         }
+        messages.onNewTexts = { [weak self] n in self?.triggersEngine.newText(count: n) }
     }
 
     func start() {
         reload()
         triggersEngine.start()
-        queueTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in self?.drainQueue() }
+        queueTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            self?.drainQueue()
+            self?.checkWindows()
+        }
+        if watchTexts { messages.start() }
+    }
+
+    /// An idle buddy standing on an app's window can set off an "on-window" trigger (the Finder heist).
+    func checkWindows(now: Date = Date()) {
+        guard canPerform(), !stage.director.isActive, !stage.nap.isActive, !stage.boardOpen else { return }
+        for b in stage.buddies where b.platform > 0 && b.canJoinGame && !b.isScripted {
+            guard let owner = stage.windowPlatforms[b.platform]?.owner else { continue }
+            if triggersEngine.windowEvent(bundleID: owner, name: appName(owner), subject: b, now: now) { return }
+        }
+    }
+
+    private func appName(_ bundleID: String) -> String? {
+        if let n = appNames[bundleID] { return n }
+        let n = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first?.localizedName
+        appNames[bundleID] = n
+        return n
+    }
+
+    /// Turns the new-text watcher on or off; asks for Full Disk Access if it can't read Messages.
+    func setWatchTexts(_ on: Bool) {
+        watchTexts = on
+        guard on else { return messages.stop() }
+        messages.start()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+            guard let self, self.watchTexts, self.messages.access != .ok else { return }
+            self.explainFullDiskAccess()
+        }
+    }
+
+    private func explainFullDiskAccess() {
+        let alert = NSAlert()
+        alert.messageText = "Let Claude Buddy notice new texts?"
+        alert.informativeText = """
+        To see when a text arrives, Claude Buddy reads your Messages database, and macOS only allows that with Full Disk Access.
+
+        It opens the database read-only and only counts new incoming messages. It never reads who they're from or what they say, and never changes anything.
+
+        In System Settings → Privacy & Security → Full Disk Access, turn on ClaudeBuddy (use + to add it from Applications if it isn't listed), then turn Watch for New Texts off and on again.
+
+        Rebuilding Claude Buddy from source gives it a new signature, so you may need to turn this on again after an update.
+        """
+        alert.addButton(withTitle: "Open Privacy Settings")
+        alert.addButton(withTitle: "Not Now")
+        NSApp.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertFirstButtonReturn { NSWorkspace.shared.open(MessagesWatcher.fullDiskAccessSettings) }
     }
 
     /// Re-reads the packs folder and re-registers everything.
@@ -105,19 +163,22 @@ final class ExtrasController {
 
     func claudeEvent(_ event: [String: Any]) { triggersEngine.claudeEvent(event) }
 
+    /// For the self-test: use these triggers without reloading packs or grabbing keys.
+    func useTriggers(_ triggers: [TriggerDef]) { triggersEngine.triggers = triggers }
+
     // MARK: - Running things
 
     @discardableResult
-    func perform(_ action: ActionSpec, label: String, queueIfBusy: Bool) -> ActivityDirector.StartResult {
+    func perform(_ action: ActionSpec, label: String, queueIfBusy: Bool, context: TriggerContext = TriggerContext()) -> ActivityDirector.StartResult {
         guard let def = activity(for: action) else { return .unknown }
         if !canPerform() {
-            if queueIfBusy { enqueue(action, label: label) }
+            if queueIfBusy { enqueue(action, label: label, context: context) }
             return .busy("Hidden")
         }
-        let result = stage.director.start(def)
+        let result = stage.director.start(def, preferred: context.subject, vars: context.vars)
         switch result {
         case .busy(let why):
-            if queueIfBusy { enqueue(action, label: label) } else { stage.director.showHUD(why, for: 1.5) }
+            if queueIfBusy { enqueue(action, label: label, context: context) } else { stage.director.showHUD(why, for: 1.5) }
         case .unavailable(let why):
             stage.director.showHUD(why, for: 2)
         default:
@@ -135,16 +196,16 @@ final class ExtrasController {
                            props: [:], steps: steps, inMenu: false, greetAtEnd: action.say == nil, pack: "adhoc")
     }
 
-    private func enqueue(_ action: ActionSpec, label: String) {
+    private func enqueue(_ action: ActionSpec, label: String, context: TriggerContext) {
         pending.removeAll { $0.action == action }
-        pending.append((action, label, Date().addingTimeInterval(120)))
+        pending.append((action, label, Date().addingTimeInterval(120), context))
     }
 
     private func drainQueue() {
         pending.removeAll { $0.expires < Date() }
         guard let next = pending.first, canPerform(), !stage.director.isActive, !stage.nap.isActive else { return }
         pending.removeFirst()
-        let r = perform(next.action, label: next.label, queueIfBusy: false)
+        let r = perform(next.action, label: next.label, queueIfBusy: false, context: next.context)
         if case .busy = r { pending.insert(next, at: 0) }
     }
 
@@ -188,6 +249,7 @@ final class ExtrasController {
                 "problems": c.problems,
                 "leader": leaderSetting + (leaderFailed ? " (in use by another app)" : ""),
                 "running": stage.director.currentID ?? "none",
+                "watchTexts": watchTexts ? "\(messages.access)" : "off",
             ]
             let data = (try? JSONSerialization.data(withJSONObject: info, options: [.prettyPrinted, .sortedKeys])) ?? Data()
             return (200, String(decoding: data, as: UTF8.self) + "\n")
@@ -280,10 +342,17 @@ final class ExtrasController {
         menu.addItem(submenu(failedBindings.isEmpty ? "Shortcuts" : "Shortcuts ⚠︎", keysMenu))
 
         let trigMenu = NSMenu()
-        trigMenu.addItem(BlockMenuItem("Automatic Treats (coffee, pizza)", on: builtinTriggers) { [weak self] in
+        trigMenu.addItem(BlockMenuItem("Automatic Treats (coffee, pizza, heists)", on: builtinTriggers) { [weak self] in
             guard let self else { return }
             self.builtinTriggers.toggle()
             self.reload()
+        })
+        let textsNeedAccess = watchTexts && messages.access == .needsFullDiskAccess
+        trigMenu.addItem(BlockMenuItem(textsNeedAccess ? "Watch for New Texts ⚠︎ needs Full Disk Access" : "Watch for New Texts",
+                                       on: watchTexts) { [weak self] in
+            guard let self else { return }
+            if textsNeedAccess { return self.explainFullDiskAccess() }
+            self.setWatchTexts(!self.watchTexts)
         })
         trigMenu.addItem(.separator())
         for t in catalog.triggers where builtinTriggers || t.pack != "builtin" { trigMenu.addItem(info(Self.describe(t))) }
@@ -347,6 +416,8 @@ final class ExtrasController {
         case .startup: what = "When Claude Buddy starts"
         case .wake: what = "When the Mac wakes"
         case .claude(let e, let tool): what = "On Claude \(e)" + (tool.map { " (\($0))" } ?? "")
+        case .onWindow(let app): what = "When a buddy is on a \(app) window"
+        case .newText: what = "When a new text arrives"
         }
         var extra: [String] = []
         if let days = t.days {

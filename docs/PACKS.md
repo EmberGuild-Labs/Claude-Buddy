@@ -190,6 +190,8 @@ A clip is a list of frames. Each frame is a pose plus `time` (seconds) and an op
 ```
 
 - `title` is the menu name. `"menu": false` hides the activity from the menu, which is useful for activities that only triggers run.
+- `"stayOnWindows": true` starts the activity wherever the buddy is, even up on a window ledge, instead of hopping down to the floor first. `start` (x and y) is that spot.
+- `"vars": {"count": "a"}` sets default words for `{placeholders}` in `say` text. A trigger's own values replace them; see [Triggers](#triggers).
 - `endWith` controls how it finishes: `wave` (default) ends with a little wave; `none` goes straight back to normal.
 - `cast` defaults to one role, `star`, played by the main buddy.
   - **`who`** picks who plays the role:
@@ -283,10 +285,11 @@ Going into it and coming out with a wagon in tow:
 | `{"together": [ {"who": "star", "steps": [...]}, {"who": "friend", "steps": [...]} ]}` | Runs lanes side by side and waits for all of them. A lane can also be a plain list of steps. |
 | `{"loop": [...], "times": 3}` | Repeats. |
 | `{"loop": [...], "until": ["click", "again"], "for": 300}` | Repeats until a condition, or a time limit in seconds. It stops *immediately* when the condition happens, even mid-step. |
-| `{"waitFor": "click", "timeout": 20, "else": [...]}` | Waits for a condition. `else` runs on timeout. |
+| `{"waitFor": "click", "timeout": 20, "then": [...], "else": [...]}` | Waits for a condition. `then` runs if it happens; `else` runs on timeout. |
 | `{"random": [[...], [...]]}` | Picks one of the lists at random. |
 | `{"if": "night", "then": [...], "else": [...]}` | Conditions: `music`, `alone`, `night`, `morning`, `afternoon`, `evening`, `weekend`, `busy` (Claude is working), `reduce-motion`, `chance:0.3`. Put `not:` in front to flip one (`not:music`). |
 | `{"call": "backflip"}` | Runs another activity's steps here, using this activity's roles. The other activity's props come along. |
+| `{"openApp": "com.apple.MobileSMS"}` | Opens an app by bundle ID or name. It only launches apps, never files or links, and isn't allowed in steps sent over HTTP. |
 
 **Conditions** for `until` and `waitFor` can be one value or a list; any of them will do:
 
@@ -381,6 +384,8 @@ A position is a number or a string like `base+offset`, for example `"right-20"`,
 | `when: app-quit` | The app quits. |
 | `when: wake` | The Mac wakes from sleep. |
 | `when: startup` | Claude Buddy launches. |
+| `when: on-window` | An idle buddy is standing on a window of `app` (default cooldown 15 minutes). The activity is performed by *that* buddy when a role is `who: any` (or `other`); add `"stayOnWindows": true` so it starts up on the window. |
+| `when: new-text` | New incoming texts arrived. Needs **Extras → Schedules & Triggers → Watch for New Texts**, which needs Full Disk Access. Gives `{count}` ("a", "2", …) and `{s}` ("" or "s"). |
 | `when: claude` | A Claude Code hook event: `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `Notification`, `Stop`, `SessionEnd`. Add `"tool"` to match one tool. |
 
 - **Matching apps.** `app` matches the app's name ("Xcode", case-insensitive) or its bundle ID ("com.apple.dt.Xcode").
@@ -389,9 +394,10 @@ A position is a number or a string like `base+offset`, for example `"right-20"`,
   - `between`: a daily window like `09:00-17:00`. Windows past midnight work too, like `22:00-02:00`.
   - `cooldown`: the minimum time between firings.
   - `chance`: `0`–`1`.
+- **Placeholders.** Triggers fill in `{placeholders}` in `say` text: `{app}` for app and window triggers, `{project}`, `{tool}` and `{event}` for Claude triggers, and `{count}`/`{s}` for new texts. `{"when": "claude", "event": "Stop", "say": "Nice work on {project}!"}`
 - **`delay`** waits before running, for example `"delay": "4s"` so a "Stop" trigger runs after the buddy's own celebration.
 - **`if`** checks a condition when it's time to run, the same ones `if` steps use. `{"every": "90m", "if": "busy", ...}` only runs while Claude is working.
-- **Built-in triggers.** The built-in pack has three automatic treats: a coffee break at 10:30 on weekdays, a coffee refill every 90 minutes while Claude is busy, and an occasional pizza party when a session finishes. Turn them off with **Extras → Schedules & Triggers → Automatic Treats**.
+- **Built-in triggers.** The built-in pack has four automatic treats: a coffee break at 10:30 on weekdays, a coffee refill every 90 minutes while Claude is busy, an occasional pizza party when a session finishes, and a pretend file heist when a buddy is on a Finder window. Turn them off with **Extras → Schedules & Triggers → Automatic Treats**. It also shows a text alert for new texts, but only when **Watch for New Texts** is on.
 - **Busy or hidden.** If the buddy is busy (another activity, a nap) or hidden, a trigger waits up to 2 minutes for it to be free.
 
 ## Tips

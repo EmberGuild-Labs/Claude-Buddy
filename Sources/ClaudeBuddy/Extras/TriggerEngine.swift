@@ -8,7 +8,7 @@ final class TriggerEngine {
         didSet { lastEvery = lastEvery.filter { k, _ in triggers.contains { $0.key == k } } }
     }
     /// Asked to run an action; the controller queues it if the buddy is busy.
-    var fire: ((TriggerDef) -> Void)?
+    var fire: ((TriggerDef, TriggerContext) -> Void)?
     var defaults = UserDefaults.standard
 
     private var lastFired: [String: Date] = [:]
@@ -83,14 +83,33 @@ final class TriggerEngine {
             guard case .app(let want, let match) = t.kind else { continue }
             let eventMatches = want == event || (want == "app-open" && (event == "app-launch" || event == "app-activate"))
             guard eventMatches, Self.appMatches(match, name: name, bundleID: bundleID) else { continue }
-            fireIfAllowed(t, now: now)
+            fireIfAllowed(t, now: now, context: TriggerContext(vars: ["app": name ?? match]))
         }
+    }
+
+    /// An idle buddy is standing on a window of this app. Returns true if something fired.
+    @discardableResult
+    func windowEvent(bundleID: String?, name: String?, subject: Buddy, now: Date) -> Bool {
+        var fired = false
+        for t in triggers {
+            guard case .onWindow(let match) = t.kind, Self.appMatches(match, name: name, bundleID: bundleID) else { continue }
+            if fireIfAllowed(t, now: now, context: TriggerContext(subject: subject, vars: ["app": name ?? match])) { fired = true }
+        }
+        return fired
+    }
+
+    /// New incoming texts arrived.
+    func newText(count: Int, now: Date = Date()) {
+        let vars = ["count": count == 1 ? "a" : "\(count)", "s": count == 1 ? "" : "s"]
+        for t in triggers where t.kind == .newText { fireIfAllowed(t, now: now, context: TriggerContext(vars: vars)) }
     }
 
     static func appMatches(_ match: String, name: String?, bundleID: String?) -> Bool {
         let m = match.lowercased()
         if let b = bundleID?.lowercased(), b == m { return true }
         if let n = name?.lowercased(), n == m || n == m.replacingOccurrences(of: ".app", with: "") { return true }
+        // No name to go on (the app isn't running): "Finder" still matches com.apple.finder.
+        if name == nil, let last = bundleID?.split(separator: ".").last, last.lowercased() == m { return true }
         return false
     }
 
@@ -102,10 +121,13 @@ final class TriggerEngine {
     func claudeEvent(_ event: [String: Any], now: Date = Date()) {
         guard let name = event["hook_event_name"] as? String else { return }
         let tool = event["tool_name"] as? String
+        var vars: [String: String] = ["event": name]
+        if let tool { vars["tool"] = tool }
+        if let cwd = event["cwd"] as? String { vars["project"] = URL(fileURLWithPath: cwd).lastPathComponent }
         for t in triggers {
             guard case .claude(let want, let wantTool) = t.kind, want == name else { continue }
             if let wantTool, wantTool != tool { continue }
-            fireIfAllowed(t, now: now)
+            fireIfAllowed(t, now: now, context: TriggerContext(vars: vars))
         }
     }
 
@@ -122,16 +144,24 @@ final class TriggerEngine {
         return true
     }
 
-    private func fireIfAllowed(_ t: TriggerDef, now: Date, markDay: Bool = false) {
-        guard allowed(t, now: now) else { return }
+    @discardableResult
+    private func fireIfAllowed(_ t: TriggerDef, now: Date, markDay: Bool = false, context: TriggerContext = TriggerContext()) -> Bool {
+        guard allowed(t, now: now) else { return false }
         lastFired[t.key] = now
         if markDay { defaults.set(Self.dayKey(now), forKey: "ext.firedDay.\(t.key)") }
-        guard t.chance >= 1 || Double.random(in: 0..<1) < t.chance else { return }
-        fire?(t)
+        guard t.chance >= 1 || Double.random(in: 0..<1) < t.chance else { return false }
+        fire?(t, context)
+        return true
     }
 
     static func dayKey(_ d: Date) -> String {
         let c = Calendar.current.dateComponents([.year, .month, .day], from: d)
         return "\(c.year!)-\(c.month!)-\(c.day!)"
     }
+}
+
+/// What a trigger was about: the buddy involved (if any) and words for `{placeholders}`.
+struct TriggerContext {
+    var subject: Buddy?
+    var vars: [String: String] = [:]
 }
