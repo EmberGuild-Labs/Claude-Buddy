@@ -249,6 +249,13 @@ enum SelfTest {
         check("closing the billboard frees the holders",
               !stage.boardOpen && !stage.buddies.contains(where: \.isHoldingBoard))
 
+        // 13. Text fields need an Edit menu for ⌘V to paste.
+        let edit = AppMenu.build().items.compactMap(\.submenu).first { $0.title == "Edit" }
+        check("Edit menu provides ⌘V paste (and ⌘C, ⌘A)",
+              edit?.items.contains { $0.action == #selector(NSText.paste(_:)) && $0.keyEquivalent == "v" } == true
+                && edit?.items.contains { $0.keyEquivalent == "c" } == true
+                && edit?.items.contains { $0.keyEquivalent == "a" } == true)
+
         print(failures == 0 ? "All checks passed." : "\(failures) check(s) failed.")
         return failures == 0 ? 0 : 1
     }

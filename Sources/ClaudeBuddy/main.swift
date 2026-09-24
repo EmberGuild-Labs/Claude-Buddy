@@ -17,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         activity.quiet = settings.quiet
+        NSApp.mainMenu = AppMenu.build()  // So ⌘V/⌘C/⌘A work in the Canvas window's text fields.
         let overlay = OverlayController(settings: settings, activity: activity)
         activity.onPulse = { [weak overlay] p, session in overlay?.stage.pulse(p, session: session) }
         server.onEvent = { [weak self] event in self?.activity.handle(event) }

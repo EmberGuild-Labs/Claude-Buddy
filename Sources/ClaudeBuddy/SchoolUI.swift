@@ -64,7 +64,15 @@ struct CanvasSettingsView: View {
                 Section {
                     TextField("Canvas address", text: $form.address, prompt: Text("yourschool.instructure.com"))
                         .textContentType(.URL)
-                    SecureField("Access token", text: $form.token, prompt: Text("Paste your token"))
+                    HStack {
+                        SecureField("Access token", text: $form.token, prompt: Text("Paste your token"))
+                        Button("Paste") {
+                            if let text = NSPasteboard.general.string(forType: .string) {
+                                form.token = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                            }
+                        }
+                        .help("Paste the token from your clipboard")
+                    }
                 } header: {
                     Text("Connect your school's Canvas")
                 } footer: {
