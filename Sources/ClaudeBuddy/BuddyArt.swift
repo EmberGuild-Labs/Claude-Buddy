@@ -17,6 +17,7 @@ struct Pose: Hashable {
     var bob = 0
     /// Landing squash: wider, shorter body.
     var squash = false
+    var hat = Hat.none
 }
 
 /// Procedural pixel art. The buddy faces right; the scene mirrors it to face left.
@@ -87,6 +88,8 @@ enum BuddyArt {
                 c.set(ex, ey, Palette.eye)
             }
         }
+
+        p.hat.draw(on: &c, left: x0 + (bw - 12) / 2, top: top)
 
         // Props
         switch p.prop {
@@ -178,6 +181,14 @@ enum BuddyArt {
         ".Z..",
         "ZZZZ",
     ], ["Z": Palette.zzz]).cgImage()
+
+    static let snowflake = PixelCanvas.from([
+        "..W..",
+        "W.W.W",
+        ".WWW.",
+        "W.W.W",
+        "..W..",
+    ], ["W": Palette.white]).cgImage()
 
     static let confettiColors: [CGColor] = [
         Palette.body, Palette.star, Palette.signalB, Palette.heart, Palette.white, RGBA(hex: 0x7BD88F),

@@ -26,7 +26,20 @@ A tiny pixel-art Claude critter that lives along the bottom of your Mac's screen
   | Nothing for 5 minutes | Sits, then falls asleep 💤 |
 
 - **Pettable.** Hold **⌥ Option** and click the buddy to pet it (hearts ❤️). Hold ⌥ and drag to pick it up, then flick to throw it. It bounces off the screen edges.
-- **Multiple sessions.** It tracks every Claude Code session and shows the most important state (needs-you > working > thinking > idle).
+- **Notices your cursor.** Its eyes follow the cursor, and it turns around if the cursor is behind it. Rest the cursor near the buddies and the closest one trots over and hops around playfully. Swipe the mouse fast right past one and it jumps and runs off.
+- **A buddy for every session.** The main buddy acts out your first Claude Code session. Each additional session drops in its own buddy, with its own hat, acting out only that session. So when one waves for permission, you know which session needs you. Hover a buddy to see a name tag with its project folder. When a session ends, its buddy waves and walks off-screen. Buddies that walk into each other stop to wave.
+- **Hats and seasons.** Session buddies wear party hats, top hats, beanies, cowboy hats, crowns, propeller caps and flowers. The main buddy dresses for the season:
+
+  | When | Main buddy |
+  |---|---|
+  | December | Santa hat, with snowflakes drifting around it |
+  | October | Witch hat and Halloween-colored confetti |
+  | Valentine's week | Heart bow and pink confetti |
+  | St. Patrick's (Mar 15–17) | Leprechaun hat and green confetti |
+  | April–May | Flower crown |
+  | New Year's, and its "birthday" (the day you installed it) | Party hat |
+
+  You can also pick any hat for it from the menu.
 - **Light on resources.** Uses about 1% CPU. See "Performance" below.
 - Respects **Reduce Motion** (no flips or wobble, fewer hops).
 
@@ -90,8 +103,11 @@ Menu-bar menu:
 | Show Buddy | Hide or show the buddy (hiding also pauses its frame loop) |
 | Quiet Mode | Ignore Claude Code events; the buddy just wanders |
 | Size | Small / Medium / Large |
+| Hat | Seasonal (automatic), a specific hat, or no hat, for the main buddy |
+| Extra Buddy per Session | Turn session buddies off to have the main buddy show all sessions combined |
+| Cursor Reactions | Eye-tracking, coming over to play, and getting startled |
 | Display | Walk on the main display, or follow the mouse between displays |
-| Try an Animation | Preview every reaction without Claude Code |
+| Try an Animation | Preview every reaction without Claude Code, including "Add a Session Buddy" (a fake session that lasts 30 s) |
 | Install / Remove Claude Code Hooks | Add or remove the hooks in `~/.claude/settings.json` |
 | Launch at Login | Start automatically |
 
@@ -114,9 +130,11 @@ Claude Code ──hook (curl)──▶ 127.0.0.1:47823 ──▶ ClaudeActivity 
 |---|---|
 | `main.swift` | App delegate, plus command-line flags (`--install-hooks`, `--uninstall-hooks`, `--render-icon`, `--render-sprites`) |
 | `Overlay.swift` | The click-through `NSPanel` and floor placement (Dock top vs. screen bottom) |
-| `BuddyStage.swift` | Behavior state machine, physics, poses, effects, ⌥-petting |
+| `BuddyStage.swift` | The strip that holds all the buddies: one display link, matching sessions to buddies, cursor tracking, ⌥-mouse routing, effects |
+| `Buddy.swift` | One buddy: behavior state machine, physics, cursor reactions, poses, name tag |
+| `Hats.swift` | Hat art and the seasonal calendar |
 | `BuddyArt.swift` / `PixelArt.swift` | All pixel art is drawn in code, from part-based `Pose`s, and cached |
-| `ClaudeActivity.swift` | Merges hook events from all sessions into one state |
+| `ClaudeActivity.swift` | Tracks each session's state and project folder, plus a combined state |
 | `EventServer.swift` | Minimal HTTP server bound to `127.0.0.1` only (Network.framework) |
 | `HookInstaller.swift` | Safely edits `~/.claude/settings.json` (idempotent, backs up first) |
 | `MenuController.swift` | Menu-bar UI and demos |
@@ -137,6 +155,7 @@ curl -s -m 1 -o /dev/null -H 'Content-Type: application/json' -H 'Expect:' \
 Hooked events: `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `Notification`, `Stop`, `SubagentStop`.
 
 Health check: `curl http://127.0.0.1:47823/claude-buddy/ping` returns `claude-buddy ok`.
+Debugging: `curl http://127.0.0.1:47823/claude-buddy/status` returns a JSON snapshot of every buddy: its mode, hat, session and position, plus the frame count.
 
 ## Notes and decisions
 
@@ -173,9 +192,12 @@ Making a release (a universal Apple Silicon + Intel build, zipped):
 gh release create v1.x.y build/ClaudeBuddy.zip
 ```
 
+- **Session buddies:** the main buddy keeps its session until that session ends, so buddies never swap jobs mid-task. Up to 6 extra buddies can appear, and their hats are handed out so no two match. A session with no events for 45 minutes counts as gone, which covers a terminal closed without a clean exit.
+- **Cursor reactions without special permissions:** the frame loop just reads the cursor position. A "fast swipe" is detected along the cursor's path between frames, so it still works at the 15 fps idle rate. Only the closest buddy comes over to play, and there are cooldowns so it doesn't get clingy.
+
 ## Ideas for later
 
 - Speech bubbles showing the tool name or a snippet of Claude's message
 - Optional sound effects
-- One buddy per Claude Code session
+- A menu-bar icon that shows Claude's status
 - Auto-hide while screen sharing

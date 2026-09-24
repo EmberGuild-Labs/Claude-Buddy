@@ -27,7 +27,7 @@ final class MenuController: NSObject, NSMenuDelegate {
         menu.removeAllItems()
 
         menu.addItem(info("Claude: \(settings.quiet ? "Quiet mode" : activity.summary)"))
-        let sessions = activity.liveSessionCount
+        let sessions = activity.liveSessions.count
         if sessions > 1 { menu.addItem(info("\(sessions) sessions")) }
         let hooksInstalled = HookInstaller.isInstalled()
         menu.addItem(info(hooksInstalled ? "Hooks: installed ✓" : "Hooks: not installed"))
@@ -45,6 +45,21 @@ final class MenuController: NSObject, NSMenuDelegate {
             sizeMenu.addItem(it)
         }
         menu.addItem(submenu("Size", sizeMenu))
+
+        let hatMenu = NSMenu()
+        let seasonal = item("Seasonal" + (overlay.seasonName.map { " (\($0))" } ?? " (none right now)"),
+                            #selector(setHat(_:)), on: settings.mainHat == nil)
+        seasonal.representedObject = nil
+        hatMenu.addItem(seasonal)
+        hatMenu.addItem(.separator())
+        for hat in Hat.allCases {
+            let it = item(hat.title, #selector(setHat(_:)), on: settings.mainHat == hat)
+            it.representedObject = hat.rawValue
+            hatMenu.addItem(it)
+        }
+        menu.addItem(submenu("Hat", hatMenu))
+        menu.addItem(item("Extra Buddy per Session", #selector(toggleSessionBuddies), on: settings.sessionBuddies))
+        menu.addItem(item("Cursor Reactions", #selector(toggleCursor), on: settings.cursorReactions))
 
         let screenMenu = NSMenu()
         screenMenu.addItem(item("Main Display", #selector(setScreenMain), on: !settings.followMouse))
@@ -110,6 +125,21 @@ final class MenuController: NSObject, NSMenuDelegate {
         overlay.applySettings()
     }
 
+    @objc private func setHat(_ sender: NSMenuItem) {
+        settings.mainHat = (sender.representedObject as? String).flatMap(Hat.init(rawValue:))
+        overlay.applySettings()
+    }
+
+    @objc private func toggleSessionBuddies() {
+        settings.sessionBuddies.toggle()
+        overlay.applySettings()
+    }
+
+    @objc private func toggleCursor() {
+        settings.cursorReactions.toggle()
+        overlay.applySettings()
+    }
+
     @objc private func setScreenMain() {
         settings.followMouse = false
         overlay.updatePlacement()
@@ -130,8 +160,10 @@ final class MenuController: NSObject, NSMenuDelegate {
         ("Needs Permission", ["hook_event_name": "Notification", "message": "Claude needs your permission to use Bash"]),
         ("Task Finished", ["hook_event_name": "Stop"]),
         ("Tool Failed", ["hook_event_name": "PostToolUse", "tool_name": "Bash", "tool_response": ["is_error": true]]),
+        ("Add a Session Buddy", ["hook_event_name": "SessionStart", "cwd": "/demo/side-project"]),
         ("Fall Asleep", nil),
     ]
+    private var demoSessionCount = 0
 
     @objc private func demo(_ sender: NSMenuItem) {
         guard let event = Self.demos[sender.tag].event else {
@@ -139,7 +171,22 @@ final class MenuController: NSObject, NSMenuDelegate {
             return
         }
         var e = event
+        let isExtra = Self.demos[sender.tag].title == "Add a Session Buddy"
+        if isExtra {
+            // A separate fake session that lasts 30 s, then its buddy walks off.
+            demoSessionCount += 1
+            let sid = "demo-extra-\(demoSessionCount)"
+            e["session_id"] = sid
+            e["cwd"] = "/demo/side-project-\(demoSessionCount)"
+            activity.handle(e)
+            activity.handle(["hook_event_name": "UserPromptSubmit", "session_id": sid])
+            Timer.scheduledTimer(withTimeInterval: 30, repeats: false) { [weak self] _ in
+                self?.activity.handle(["hook_event_name": "SessionEnd", "session_id": sid])
+            }
+            return
+        }
         e["session_id"] = "demo"
+        e["cwd"] = "/demo/claude-buddy"
         let wasQuiet = activity.quiet
         activity.quiet = false
         activity.handle(e)

@@ -31,4 +31,30 @@ final class Settings {
     }
 
     var pixelScale: CGFloat { Self.pixelScales[sizeIndex] }
+
+    /// Each extra Claude Code session gets its own buddy.
+    var sessionBuddies: Bool {
+        get { defaults.object(forKey: "sessionBuddies") as? Bool ?? true }
+        set { defaults.set(newValue, forKey: "sessionBuddies") }
+    }
+
+    /// Eyes follow the cursor; buddies come over to play or get startled by fast swipes.
+    var cursorReactions: Bool {
+        get { defaults.object(forKey: "cursorReactions") as? Bool ?? true }
+        set { defaults.set(newValue, forKey: "cursorReactions") }
+    }
+
+    /// The main buddy's hat: nil = seasonal (automatic).
+    var mainHat: Hat? {
+        get { defaults.string(forKey: "mainHat").flatMap(Hat.init(rawValue:)) }
+        set { defaults.set(newValue?.rawValue, forKey: "mainHat") }
+    }
+
+    /// First launch, for the buddy's birthday party hat.
+    var installedAt: Date {
+        if let d = defaults.object(forKey: "installedAt") as? Date { return d }
+        let now = Date()
+        defaults.set(now, forKey: "installedAt")
+        return now
+    }
 }

@@ -10,6 +10,8 @@ walks along the bottom of the screen and reacts to Claude Code hook events sent 
    `~/.claude/settings.json` (backs the file up first; idempotent; keeps existing hooks), and launches.
    Use `--no-hooks` to skip the settings change.
 2. Verify: `curl -s http://127.0.0.1:47823/claude-buddy/ping` should print `claude-buddy ok`.
+   `curl -s http://127.0.0.1:47823/claude-buddy/status` shows each buddy's state as JSON. If `frames` isn't
+   increasing, the display is probably asleep, since display links pause then.
 3. Tell the user to restart their other Claude Code sessions (hooks load when a session starts), and
    that holding ⌥ Option while clicking the buddy pets it.
 

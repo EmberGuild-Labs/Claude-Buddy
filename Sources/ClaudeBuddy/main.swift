@@ -15,8 +15,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         activity.quiet = settings.quiet
         let overlay = OverlayController(settings: settings, activity: activity)
-        activity.onPulse = { [weak overlay] p in overlay?.stage.pulse(p) }
+        activity.onPulse = { [weak overlay] p, session in overlay?.stage.pulse(p, session: session) }
         server.onEvent = { [weak self] event in self?.activity.handle(event) }
+        server.statusProvider = { [weak overlay] in overlay?.stage.status ?? [:] }
         do { try server.start() } catch { NSLog("Claude Buddy: server failed to start: \(error)") }
         menu = MenuController(settings: settings, activity: activity, overlay: overlay, server: server)
         self.overlay = overlay

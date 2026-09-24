@@ -31,6 +31,7 @@ final class OverlayController {
     let stage = BuddyStage(frame: NSRect(x: 0, y: 0, width: 480, height: 200))
     private let settings: Settings
     private var timer: Timer?
+    private var lookTimer: Timer?
     private var observers: [NSObjectProtocol] = []
     private(set) var floorMode = "Above the Dock"
 
@@ -38,14 +39,17 @@ final class OverlayController {
         self.settings = settings
         stage.pixel = settings.pixelScale
         stage.reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-        stage.activityProvider = { [unowned activity] in activity.current }
-        stage.recentToolProvider = { [unowned activity] in activity.recentToolKind }
+        stage.sessionsProvider = { [unowned activity] in activity.liveSessions }
+        stage.aggregateProvider = { [unowned activity] in activity.aggregate }
+        applyLook()
 
         updatePlacement()
         panel.contentView = stage
         setVisible(settings.visible)
 
         timer = Timer.scheduledTimer(withTimeInterval: 0.75, repeats: true) { [weak self] _ in self?.updatePlacement() }
+        // Seasons change at midnight; checking hourly is plenty.
+        lookTimer = Timer.scheduledTimer(withTimeInterval: 3600, repeats: true) { [weak self] _ in self?.applyLook() }
         timer?.tolerance = 0.25
 
         let ws = NSWorkspace.shared.notificationCenter
@@ -69,8 +73,22 @@ final class OverlayController {
 
     func applySettings() {
         stage.pixel = settings.pixelScale
+        applyLook()
         updatePlacement()
     }
+
+    /// Hat, seasonal extras, and behavior toggles.
+    private func applyLook() {
+        let season = Season.look(installed: settings.installedAt)
+        stage.mainHat = settings.mainHat ?? season?.hat ?? .none
+        stage.seasonalConfetti = season?.confetti
+        stage.snowing = season?.snow ?? false
+        stage.sessionBuddies = settings.sessionBuddies
+        stage.cursorReactions = settings.cursorReactions
+    }
+
+    /// Name of the current season's look, for the menu.
+    var seasonName: String? { Season.look(installed: settings.installedAt).map { "\($0.name): \($0.hat.title)" } }
 
     private func targetScreen() -> NSScreen? {
         if settings.followMouse {

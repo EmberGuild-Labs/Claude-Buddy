@@ -5,12 +5,16 @@ import Network
 ///
 ///   POST /claude-buddy/event   body = hook JSON  → 204
 ///   GET  /claude-buddy/ping                      → 200 "claude-buddy ok"
+///   GET  /claude-buddy/status                    → 200 JSON snapshot of the buddies
 final class EventServer {
     static let eventPath = "/claude-buddy/event"
     static let pingPath = "/claude-buddy/ping"
+    static let statusPath = "/claude-buddy/status"
 
     let port: UInt16
     var onEvent: (([String: Any]) -> Void)?
+    /// Called on the main thread.
+    var statusProvider: (() -> [String: Any])?
     private(set) var status = "Starting…"
 
     private var listener: NWListener?
@@ -94,6 +98,11 @@ final class EventServer {
             } else {
                 reply = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
             }
+        case ("GET", Self.statusPath):
+            let status = DispatchQueue.main.sync { self.statusProvider?() ?? [:] }
+            let body = (try? JSONSerialization.data(withJSONObject: status, options: [.prettyPrinted, .sortedKeys])) ?? Data("{}".utf8)
+            reply = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: \(body.count)\r\nConnection: close\r\n\r\n"
+                + String(decoding: body, as: UTF8.self)
         case ("GET", Self.pingPath):
             reply = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 15\r\nConnection: close\r\n\r\nclaude-buddy ok"
         default:

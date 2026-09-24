@@ -12,7 +12,7 @@ enum SpriteSheet {
         Pose(eyes: .wide, prop: .antennaA, bob: 1), Pose(eyes: .wide, prop: .antennaB),
         Pose(eyes: .wide, arms: .waveHigh), Pose(eyes: .wide, arms: .waveLow),
         Pose(eyes: .happy, arms: .up), Pose(eyes: .dizzy), Pose(squash: true),
-    ]
+    ] + Hat.allCases.dropFirst().map { Pose(hat: $0) }
 
     static func write(to url: URL, scale: Int = 6) {
         let cols = 6
