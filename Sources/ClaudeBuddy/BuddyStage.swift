@@ -172,7 +172,7 @@ final class BuddyStage: NSView {
     var status: [String: Any] {
         ["frames": frames, "fps": currentFPS, "running": isRunning, "groundY": Int(groundY),
          "width": Int(bounds.width), "height": Int(bounds.height), "buddies": buddies.map(\.status),
-         "windowLedges": windowPlatforms.count, "music": musicPlaying ? (musicTrack ?? "playing") : "off",
+         "windowLedges": windowPlatforms.count, "board": boardOpen ? (boardVisible ? "up" : "gathering") : "closed", "music": musicPlaying ? (musicTrack ?? "playing") : "off",
          "game": tagIt != nil ? "tag" : (congaLeader != nil ? "conga" : "none"),
          "tagIt": tagIt.flatMap { b in buddies.firstIndex { $0 === b } } ?? -1]
     }

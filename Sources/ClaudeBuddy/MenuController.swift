@@ -10,9 +10,11 @@ final class MenuController: NSObject, NSMenuDelegate {
     private let server: EventServer
     private let school: SchoolStore
     private let schoolWindows: SchoolWindows
+    private let hotKey: HotKey
 
     init(settings: Settings, activity: ClaudeActivity, overlay: OverlayController, server: EventServer,
-         school: SchoolStore, schoolWindows: SchoolWindows) {
+         school: SchoolStore, schoolWindows: SchoolWindows, hotKey: HotKey) {
+        self.hotKey = hotKey
         self.school = school
         self.schoolWindows = schoolWindows
         self.settings = settings
@@ -31,8 +33,23 @@ final class MenuController: NSObject, NSMenuDelegate {
         menu.removeAllItems()
 
         let today = item(overlay.stage.boardOpen ? "Put Away Today Board" : "Today…", #selector(openToday))
-        today.keyEquivalent = "t"
+        let shortcut = settings.todayShortcut
+        if shortcut != .off && !hotKey.failed {
+            today.keyEquivalent = shortcut.menuKey
+            today.keyEquivalentModifierMask = shortcut.menuModifiers
+        }
         menu.addItem(today)
+        let shortcutMenu = NSMenu()
+        for choice in HotKey.Choice.allCases {
+            let it = item(choice.title, #selector(setShortcut(_:)), on: choice == shortcut)
+            it.representedObject = choice.rawValue
+            shortcutMenu.addItem(it)
+        }
+        if hotKey.failed {
+            shortcutMenu.addItem(.separator())
+            shortcutMenu.addItem(info("\(shortcut.title) is taken by another app. Pick another."))
+        }
+        menu.addItem(submenu(hotKey.failed ? "Today Shortcut ⚠︎" : "Today Shortcut", shortcutMenu))
         if let summary = school.summary { menu.addItem(info(summary)) }
         menu.addItem(item(school.isConnected ? "Canvas Settings…" : "Connect Canvas…", #selector(openCanvasSettings)))
         menu.addItem(.separator())
@@ -219,6 +236,14 @@ final class MenuController: NSObject, NSMenuDelegate {
         if thinking { activity.handle(["hook_event_name": "UserPromptSubmit", "session_id": sid]) }
         Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { [weak self] _ in
             self?.activity.handle(["hook_event_name": "SessionEnd", "session_id": sid])
+        }
+    }
+
+    @objc private func setShortcut(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String, let choice = HotKey.Choice(rawValue: raw) else { return }
+        settings.todayShortcut = choice
+        if !hotKey.register(choice) {
+            alert("Shortcut already in use", "Another app is using \(choice.title). Pick a different Today shortcut.", style: .warning)
         }
     }
 

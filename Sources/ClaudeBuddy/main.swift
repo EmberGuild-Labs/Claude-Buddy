@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menu: MenuController?
     private var school: SchoolStore?
     private var schoolWindows: SchoolWindows?
+    private var hotKey: HotKey?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         if let id = Bundle.main.bundleIdentifier,
@@ -19,7 +20,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let overlay = OverlayController(settings: settings, activity: activity)
         activity.onPulse = { [weak overlay] p, session in overlay?.stage.pulse(p, session: session) }
         server.onEvent = { [weak self] event in self?.activity.handle(event) }
-        server.statusProvider = { [weak overlay] in overlay?.stage.status ?? [:] }
+        server.statusProvider = { [weak overlay, weak self] in
+            var status = overlay?.stage.status ?? [:]
+            if let hk = self?.hotKey { status["todayShortcut"] = hk.failed ? "\(hk.registered.title) (in use by another app)" : hk.registered.title }
+            return status
+        }
         do { try server.start() } catch { NSLog("Claude Buddy: server failed to start: \(error)") }
         let school = SchoolStore()
         let windows = SchoolWindows(store: school)
@@ -38,10 +43,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             default: break
             }
         }
+        // ⌃⌥T (or the chosen shortcut) summons the Today billboard from any app.
+        let hotKey = HotKey { [weak overlay, weak school] in
+            school?.refreshIfStale()
+            overlay?.stage.toggleBoard()
+        }
+        hotKey.register(settings.todayShortcut)
+        self.hotKey = hotKey
         self.school = school
         schoolWindows = windows
         menu = MenuController(settings: settings, activity: activity, overlay: overlay, server: server,
-                              school: school, schoolWindows: windows)
+                              school: school, schoolWindows: windows, hotKey: hotKey)
         self.overlay = overlay
     }
 }

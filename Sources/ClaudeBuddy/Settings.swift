@@ -44,6 +44,12 @@ final class Settings {
         set { defaults.set(newValue, forKey: "cursorReactions") }
     }
 
+    /// System-wide shortcut that toggles the Today billboard.
+    var todayShortcut: HotKey.Choice {
+        get { defaults.string(forKey: "todayShortcut").flatMap(HotKey.Choice.init(rawValue:)) ?? .controlOptionT }
+        set { defaults.set(newValue.rawValue, forKey: "todayShortcut") }
+    }
+
     /// Buddies hop onto the tops of app windows.
     var climbWindows: Bool {
         get { defaults.object(forKey: "climbWindows") as? Bool ?? true }

@@ -37,7 +37,7 @@ A tiny pixel-art Claude critter that lives along the bottom of your Mac's screen
   - **Piggyback:** ⌥-drag one buddy and drop it on another's head to ride along. Stacks go three high.
 - **Dances to your music.** When Spotify or Apple Music is playing, idle buddies dance in sync with floating music notes, and standing buddies bob along. Hover the main buddy while it dances to see the song. The apps don't report tempo, so each song gets a steady made-up beat (96–132 BPM, the same every time for a given song) instead of real beat-matching. Buddies start dancing the next time you press play, skip, or pause.
 - **Canvas: what's due, and reminders.** Connect your school's Canvas and:
-  - Open **Today** from the menu bar (⌘T while the menu is open). The buddies run over and **hold up a pixel-art billboard**, styled like a video-game menu: an arcade font, pixel icons, and tabs for **DUE / MISSING / GRADES**. It shows what's due today, tomorrow, and this week, what's submitted, and your grades. Hover a row for the ► cursor and its course; click it to open it in Canvas. Scroll or use ◄ ► to page, and click × to put it away. The main buddy holds it, and if another buddy is around, it grabs the other end.
+  - Press **⌃⌥T** (Control-Option-T) from any app, or choose **Today…** from the menu bar. The buddies run over and **hold up a pixel-art billboard**, styled like a video-game menu: an arcade font, pixel icons, and tabs for **DUE / MISSING / GRADES**. It shows what's due today, tomorrow, and this week, what's submitted, and your grades. Hover a row for the ► cursor and its course; click it to open it in Canvas. Scroll or use ◄ ► to page, and click × to put it away. The main buddy holds it, and if another buddy is around, it grabs the other end.
   - The main buddy **holds up a sign** a day, 3 hours, and 1 hour before each unfinished assignment is due. The last one is urgent: it gets a red border and the buddy hops for attention.
   - Once a day it gives you a heads-up about missing work. A pile of old missing assignments becomes one reminder, not a flood.
   - ⌥-click the sign to open that assignment.
@@ -124,7 +124,8 @@ Menu-bar menu:
 | Item | What it does |
 |---|---|
 | Status lines | What Claude is doing, whether hooks are installed, where the floor is, and server status |
-| Today… / Put Away Today Board | The buddies hold up the Today billboard (or put it away) |
+| Today… / Put Away Today Board | The buddies hold up the Today billboard (or put it away). Shortcut: **⌃⌥T** from any app |
+| Today Shortcut | Choose ⌃⌥T (default), ⌥⌘T, ⌃⌥Space, ⌥T, or Off. ⌥T works, but ⌥T normally types "†", and that stops working everywhere while it's the shortcut |
 | Canvas: N due today · N missing | Quick status (once connected) |
 | Connect Canvas… / Canvas Settings… | Connect or disconnect Canvas; turn due-date reminders on or off |
 | Show Buddy | Hide or show the buddy (hiding also pauses its frame loop) |
@@ -164,6 +165,7 @@ Claude Code ──hook (curl)──▶ 127.0.0.1:47823 ──▶ ClaudeActivity 
 | `Canvas.swift` | Canvas REST client (planner items, missing submissions, course grades) and parsing |
 | `School.swift` | Refreshing Canvas data, and the reminder rules (when the buddy holds up a sign) |
 | `Billboard.swift` | The Today billboard and reminder placard: layout, tabs, paging, and click regions, all drawn in pixels |
+| `HotKey.swift` | The system-wide Today shortcut (Carbon hot keys, no Accessibility permission needed) |
 | `PixelFont.swift` | The 5×7 arcade font and 7×7 pixel icons, drawn in code |
 | `SchoolUI.swift` | The Canvas settings window (SwiftUI) |
 | `Keychain.swift` | Stores the Canvas token in the macOS Keychain |
