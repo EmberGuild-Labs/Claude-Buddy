@@ -105,6 +105,11 @@ final class SchoolStore: ObservableObject {
     @Published private(set) var isRefreshing = false
     @Published private(set) var lastError: String?
     @Published private(set) var canvasHost: URL?
+    /// The token, read from the Keychain once at launch and kept in memory. Reading it can show a
+    /// Keychain prompt (e.g. after a rebuild changes the app's signature), so it never happens on
+    /// the main thread or while a menu is open: a prompt raised during menu tracking can't take
+    /// keyboard focus, and a denied read would otherwise prompt again on every menu open.
+    @Published private var token: String?
 
     /// Called with reminders to show (the app routes them to the main buddy).
     var onReminder: ((Reminder) -> Void)?
@@ -123,13 +128,20 @@ final class SchoolStore: ObservableObject {
         NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
             self?.refresh()
         }
-        refresh()
+        guard canvasHost != nil else { return }
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let token = Keychain.load(account: Self.tokenAccount)
+            DispatchQueue.main.async {
+                self?.token = token
+                self?.refresh()
+            }
+        }
     }
 
-    var isConnected: Bool { canvasHost != nil && Keychain.load(account: Self.tokenAccount) != nil }
+    var isConnected: Bool { canvasHost != nil && token != nil }
 
     private var client: CanvasClient? {
-        guard let host = canvasHost, let token = Keychain.load(account: Self.tokenAccount) else { return nil }
+        guard let host = canvasHost, let token else { return nil }
         return CanvasClient(base: host, token: token)
     }
 
@@ -145,6 +157,7 @@ final class SchoolStore: ObservableObject {
             }
             UserDefaults.standard.set(host.absoluteString, forKey: "canvasHost")
             canvasHost = host
+            self.token = trimmed
             refresh()
             return .success(name)
         } catch {
@@ -157,6 +170,7 @@ final class SchoolStore: ObservableObject {
         UserDefaults.standard.removeObject(forKey: "canvasHost")
         UserDefaults.standard.removeObject(forKey: "firedReminders")
         canvasHost = nil
+        token = nil
         snapshot = nil
         lastError = nil
     }
