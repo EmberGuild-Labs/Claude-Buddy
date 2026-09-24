@@ -42,7 +42,9 @@ A tiny pixel-art Claude critter that lives along the bottom of your Mac's screen
   - Once a day it gives you a heads-up about missing work. A pile of old missing assignments becomes one reminder, not a flood.
   - ⌥-click the sign to open that assignment.
 
-  ![The Today billboard](docs/billboard.png)
+  ![The Today billboard (sample data)](docs/billboard.png)
+
+  *Picture made with sample data. The app itself only ever shows your real Canvas assignments.*
 - **Hats and seasons.** Session buddies wear party hats, top hats, beanies, cowboy hats, crowns, propeller caps and flowers. The main buddy dresses for the season:
 
   | When | Main buddy |

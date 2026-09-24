@@ -43,8 +43,7 @@ enum ReminderPlanner {
             if left <= 3600 { stage = "1h" } else if left <= 3 * 3600 { stage = "3h" } else if left <= 24 * 3600 { stage = "24h" } else { continue }
             let key = "due-\(item.id)-\(stage)"
             guard !fired.contains(key) else { continue }
-            let label = item.course.isEmpty ? item.title : "\(shortCourse(item.course)): \(item.title)"
-            out.append(Reminder(key: key, text: "\(label) — due \(relative(due, now: now))", urgent: stage == "1h", url: item.url))
+            out.append(Reminder(key: key, text: text(for: item, due: due, now: now), urgent: stage == "1h", url: item.url))
         }
 
         // Silent "covered" entries only mark things as handled; count only visible ones.
@@ -54,6 +53,20 @@ enum ReminderPlanner {
             visible += 1
             return visible <= maxPerCheck
         }
+    }
+
+    /// "AP Chemistry: Lab Report — due in 45 min"
+    static func text(for item: SchoolItem, due: Date, now: Date) -> String {
+        let label = item.course.isEmpty ? item.title : "\(shortCourse(item.course)): \(item.title)"
+        return "\(label) — due \(relative(due, now: now))"
+    }
+
+    /// The soonest unfinished real assignment, for "Show Next Assignment".
+    static func next(in snapshot: SchoolSnapshot, now: Date) -> Reminder? {
+        guard let item = snapshot.upcoming.first(where: { !$0.isDone && !$0.isEvent && ($0.due ?? .distantPast) > now }),
+              let due = item.due else { return nil }
+        return Reminder(key: "next-\(item.id)-\(now.timeIntervalSince1970)", text: text(for: item, due: due, now: now),
+                        urgent: due.timeIntervalSince(now) <= 3600, url: item.url)
     }
 
     static func dayStamp(_ date: Date) -> String {

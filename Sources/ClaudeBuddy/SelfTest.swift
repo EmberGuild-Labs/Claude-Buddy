@@ -203,6 +203,9 @@ enum SelfTest {
                 && shown.contains { $0.text.hasPrefix("AP Chemistry: Lab Report — due in") && $0.urgent }
                 && shown.contains { $0.text.hasPrefix("AP Chemistry: Unit Quiz") && !$0.urgent }
                 && !shown.contains { $0.text.contains("Worksheet") }, "\(shown.map(\.text))")
+        check("\"Show My Next Assignment\" picks the soonest unfinished one",
+              ReminderPlanner.next(in: snap, now: now)?.text.hasPrefix("AP Chemistry: Lab Report") == true
+                && ReminderPlanner.next(in: SchoolSnapshot(), now: now) == nil)
         check("reminders don't repeat", ReminderPlanner.due(now: now.addingTimeInterval(60), snapshot: snap, fired: fired)
                 .filter { !$0.text.isEmpty }.isEmpty)
 

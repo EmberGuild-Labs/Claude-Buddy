@@ -200,7 +200,7 @@ final class MenuController: NSObject, NSMenuDelegate {
     private static let demoTitles = [
         "Thinking", "Running a Command", "Editing Code", "Searching Files", "Browsing the Web",
         "Needs Permission", "Task Finished", "Tool Failed", "Fall Asleep",
-        "Dance Party (pretend music)", "Game of Tag", "Conga Line", "Add a Session Buddy", "School Reminder",
+        "Dance Party (pretend music)", "Game of Tag", "Conga Line", "Add a Session Buddy", "Show My Next Assignment",
     ]
     private var demoSessionCount = 0
 
@@ -221,9 +221,16 @@ final class MenuController: NSObject, NSMenuDelegate {
             stage.startDanceParty(seconds: 12)
         case "Game of Tag": withPlaymates { $0.startTag() }
         case "Conga Line": withPlaymates { $0.startConga() }
-        case "School Reminder":
-            stage.showReminder(Reminder(key: "demo-\(Date().timeIntervalSince1970)",
-                                        text: "Chemistry: Lab Report — due in 45 min", urgent: true, url: nil))
+        case "Show My Next Assignment":
+            // Only ever real Canvas data: the next thing due, or the billboard if nothing is.
+            if !school.isConnected {
+                schoolWindows.showSettings()
+            } else if let snapshot = school.snapshot, let next = ReminderPlanner.next(in: snapshot, now: Date()) {
+                stage.showReminder(next)
+            } else {
+                school.refreshIfStale()
+                stage.openBoard()
+            }
         default: addDemoSession(thinking: true)
         }
     }
