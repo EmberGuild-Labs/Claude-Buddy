@@ -8,7 +8,6 @@ final class MenuController: NSObject, NSMenuDelegate {
     private let activity: ClaudeActivity
     private let overlay: OverlayController
     private let server: EventServer
-    private var demoEnd: Timer?
 
     init(settings: Settings, activity: ClaudeActivity, overlay: OverlayController, server: EventServer) {
         self.settings = settings
@@ -70,12 +69,16 @@ final class MenuController: NSObject, NSMenuDelegate {
         menu.addItem(submenu("Display", screenMenu))
 
         let demoMenu = NSMenu()
-        for (i, title) in Self.demos.map(\.title).enumerated() {
+        for (i, title) in Self.demoTitles.enumerated() {
             let it = item(title, #selector(demo(_:)))
             it.tag = i
             demoMenu.addItem(it)
         }
         menu.addItem(submenu("Try an Animation", demoMenu))
+        let extras = overlay.stage.extraBuddyCount
+        let dismiss = item(extras > 0 ? "Dismiss Extra Buddies (\(extras))" : "Dismiss Extra Buddies", #selector(dismissExtras))
+        if extras == 0 { dismiss.action = nil }
+        menu.addItem(dismiss)
         menu.addItem(info("Tip: hold ⌥ and click to pet, drag to toss"))
         menu.addItem(.separator())
 
@@ -164,78 +167,62 @@ final class MenuController: NSObject, NSMenuDelegate {
         overlay.updatePlacement()
     }
 
-    /// Demos feed fake hook events through the real pipeline.
-    private static let demos: [(title: String, event: [String: Any]?)] = [
-        ("Thinking", ["hook_event_name": "UserPromptSubmit"]),
-        ("Running a Command", ["hook_event_name": "PreToolUse", "tool_name": "Bash"]),
-        ("Editing Code", ["hook_event_name": "PreToolUse", "tool_name": "Edit"]),
-        ("Searching Files", ["hook_event_name": "PreToolUse", "tool_name": "Grep"]),
-        ("Browsing the Web", ["hook_event_name": "PreToolUse", "tool_name": "WebSearch"]),
-        ("Needs Permission", ["hook_event_name": "Notification", "message": "Claude needs your permission to use Bash"]),
-        ("Task Finished", ["hook_event_name": "Stop"]),
-        ("Tool Failed", ["hook_event_name": "PostToolUse", "tool_name": "Bash", "tool_response": ["is_error": true]]),
-        ("Add a Session Buddy", ["hook_event_name": "SessionStart", "cwd": "/demo/side-project"]),
-        ("Fall Asleep", nil),
-        ("Dance Party (pretend music)", nil),
-        ("Game of Tag", nil),
-        ("Conga Line", nil),
+    /// Menu demos. Most make every buddy act out the same thing for a while.
+    private static let demoTitles = [
+        "Thinking", "Running a Command", "Editing Code", "Searching Files", "Browsing the Web",
+        "Needs Permission", "Task Finished", "Tool Failed", "Fall Asleep",
+        "Dance Party (pretend music)", "Game of Tag", "Conga Line", "Add a Session Buddy",
     ]
     private var demoSessionCount = 0
 
     @objc private func demo(_ sender: NSMenuItem) {
-        guard let event = Self.demos[sender.tag].event else {
-            switch Self.demos[sender.tag].title {
-            case "Game of Tag": withPlaymates { $0.startTag() }
-            case "Conga Line": withPlaymates { $0.startConga() }
-            case "Dance Party (pretend music)": overlay.music.simulate(seconds: 25)
-            default: overlay.stage.forceSleep()
-            }
-            return
+        let stage = overlay.stage
+        switch Self.demoTitles[sender.tag] {
+        case "Thinking": stage.demo(.thinking)
+        case "Running a Command": stage.demo(.tool(.terminal), tool: .terminal)
+        case "Editing Code": stage.demo(.tool(.build), tool: .build)
+        case "Searching Files": stage.demo(.tool(.search), tool: .search)
+        case "Browsing the Web": stage.demo(.tool(.web), tool: .web)
+        case "Needs Permission": stage.demo(.waiting, seconds: 8)
+        case "Task Finished": stage.demoPulse(.finished)
+        case "Tool Failed": stage.demoPulse(.failed)
+        case "Fall Asleep": stage.forceSleep()
+        case "Dance Party (pretend music)":
+            overlay.music.simulate(seconds: 25)
+            stage.startDanceParty(seconds: 12)
+        case "Game of Tag": withPlaymates { $0.startTag() }
+        case "Conga Line": withPlaymates { $0.startConga() }
+        default: addDemoSession(thinking: true)
         }
-        var e = event
-        let isExtra = Self.demos[sender.tag].title == "Add a Session Buddy"
-        if isExtra {
-            // A separate fake session that lasts 30 s, then its buddy walks off.
-            demoSessionCount += 1
-            let sid = "demo-extra-\(demoSessionCount)"
-            e["session_id"] = sid
-            e["cwd"] = "/demo/side-project-\(demoSessionCount)"
-            activity.handle(e)
-            activity.handle(["hook_event_name": "UserPromptSubmit", "session_id": sid])
-            Timer.scheduledTimer(withTimeInterval: 30, repeats: false) { [weak self] _ in
-                self?.activity.handle(["hook_event_name": "SessionEnd", "session_id": sid])
-            }
-            return
+    }
+
+    /// A pretend Claude session (so a new buddy drops in) that ends on its own.
+    private func addDemoSession(thinking: Bool, lasting seconds: TimeInterval = 30) {
+        demoSessionCount += 1
+        let sid = "demo-extra-\(demoSessionCount)"
+        activity.handle(["hook_event_name": "SessionStart", "session_id": sid, "cwd": "/demo/side-project-\(demoSessionCount)"])
+        if thinking { activity.handle(["hook_event_name": "UserPromptSubmit", "session_id": sid]) }
+        Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { [weak self] _ in
+            self?.activity.handle(["hook_event_name": "SessionEnd", "session_id": sid])
         }
-        e["session_id"] = "demo"
-        e["cwd"] = "/demo/claude-buddy"
-        let wasQuiet = activity.quiet
-        activity.quiet = false
-        activity.handle(e)
-        activity.quiet = wasQuiet
-        demoEnd?.invalidate()
-        demoEnd = Timer.scheduledTimer(withTimeInterval: 15, repeats: false) { [weak self] _ in
-            self?.activity.handle(["hook_event_name": "SessionEnd", "session_id": "demo"])
-        }
+    }
+
+    @objc private func dismissExtras() {
+        activity.endSessions { $0.hasPrefix("demo") }
+        overlay.stage.dismissExtras()
     }
 
     /// Games need at least two idle buddies; bring in a couple of pretend sessions if needed.
     private func withPlaymates(_ start: @escaping (BuddyStage) -> Bool) {
         if start(overlay.stage) { return }
-        for _ in 0..<2 {
-            demoSessionCount += 1
-            let sid = "demo-extra-\(demoSessionCount)"
-            activity.handle(["hook_event_name": "SessionStart", "session_id": sid, "cwd": "/demo/playmate-\(demoSessionCount)"])
-            Timer.scheduledTimer(withTimeInterval: 40, repeats: false) { [weak self] _ in
-                self?.activity.handle(["hook_event_name": "SessionEnd", "session_id": sid])
-            }
-        }
+        for _ in 0..<2 { addDemoSession(thinking: false, lasting: 40) }
         // Let them drop in and land first.
         Timer.scheduledTimer(withTimeInterval: 3.5, repeats: false) { [weak self] _ in
             guard let self else { return }
             _ = start(self.overlay.stage)
         }
     }
+
 
     @objc private func installHooks() {
         do {

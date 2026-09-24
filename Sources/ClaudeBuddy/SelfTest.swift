@@ -79,16 +79,25 @@ enum SelfTest {
         simulate(2)
         var itChanges = 0
         var lastIt = -1
+        var elapsed = 0.0
+        var lastChangeAt = -10.0
+        var quickestTagBack = Double.infinity
         // Buddies mid-reaction (e.g. a high-five) sit games out, so keep trying like the stage does.
         simulate(10, until: { stage.startTag() })
         check("game of tag starts", game == "tag", "\(stage.status)")
         simulate(15, until: {
+            elapsed += 1.0 / 30
             let it = stage.status["tagIt"] as? Int ?? -1
-            if it != lastIt && lastIt != -1 && it != -1 { itChanges += 1 }
+            if it != lastIt && lastIt != -1 && it != -1 {
+                itChanges += 1
+                quickestTagBack = min(quickestTagBack, elapsed - lastChangeAt)
+                lastChangeAt = elapsed
+            }
             if it != -1 { lastIt = it }
             return game == "none"
         })
         check("tag gets passed at least once", itChanges >= 1, "changes=\(itChanges)")
+        check("no instant tag-backs (new \"it\" counts first)", quickestTagBack >= 1.2, "quickest=\(quickestTagBack)s")
         check("tag ends", game == "none")
 
         // 6. Piggyback: drop one buddy onto another's head.
@@ -119,6 +128,28 @@ enum SelfTest {
         event("SessionEnd", "c")
         simulate(25, until: { stage.buddies.count < count })
         check("buddy leaves when its session ends", stage.buddies.count == count - 1, "count=\(stage.buddies.count)")
+
+        // 9. Menu demos make every buddy act it out.
+        simulate(3)
+        stage.demo(.waiting, seconds: 4)
+        let everyone = { stage.buddies.filter { !$0.isLeaving } }
+        simulate(3, until: { everyone().allSatisfy { mode($0) == "alert" } })
+        check("every buddy waves in the permission demo", everyone().allSatisfy { mode($0) == "alert" },
+              "\(everyone().map(mode))")
+        simulate(3)
+
+        // 10. Dismissing extra buddies: they leave and don't come back, but new sessions still get one.
+        event("SessionStart", "e")
+        simulate(4)
+        stage.dismissExtras()
+        simulate(30, until: { stage.buddies.count == 1 })
+        check("dismiss sends every extra buddy away", stage.buddies.count == 1 && stage.buddies[0].isMain,
+              "count=\(stage.buddies.count)")
+        simulate(2)
+        check("dismissed sessions don't get a buddy back", stage.buddies.count == 1)
+        event("SessionStart", "f")
+        simulate(4)
+        check("a new session still gets a buddy", stage.buddies.count == 2, "count=\(stage.buddies.count)")
 
         print(failures == 0 ? "All checks passed." : "\(failures) check(s) failed.")
         return failures == 0 ? 0 : 1

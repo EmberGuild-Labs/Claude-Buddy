@@ -153,6 +153,11 @@ final class ClaudeActivity {
         sessions[sid] = s
     }
 
+    /// Forgets sessions whose ID matches (used to clear out pretend demo sessions).
+    func endSessions(where matches: (String) -> Bool) {
+        for id in sessions.keys where matches(id) { sessions[id] = nil }
+    }
+
     private func pulse(_ p: Pulse, _ sid: String) {
         guard !quiet else { return }
         onPulse?(p, sid)

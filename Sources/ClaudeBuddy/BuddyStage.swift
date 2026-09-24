@@ -82,6 +82,12 @@ final class BuddyStage: NSView {
     private var simTime: TimeInterval = 0
     private var recentFinishes: [(session: String, at: TimeInterval)] = []
     private var pendingConga: TimeInterval?
+
+    /// While a menu demo runs, every buddy acts it out together.
+    private(set) var demoInfo: SessionInfo?
+    private var demoUntil: TimeInterval = 0
+    /// Sessions whose buddies were dismissed; they don't get one back until the session ends.
+    private var dismissedSessions: Set<String> = []
     private var congaRetries = 0
 
     /// True while someone stands on (or is jumping around) windows, so window positions
@@ -138,7 +144,37 @@ final class BuddyStage: NSView {
         syncSessions()
         let target = buddies.first { $0.sessionID == session } ?? main
         target?.pulse(p)
-        if p == .finished { noteFinish(session) }
+        if p == .finished {
+            for b in buddies where b !== target { b.cheer() }  // Cheer from the sidelines.
+            noteFinish(session)
+        }
+    }
+
+    /// Menu demos: everyone acts out an activity for a while…
+    func demo(_ activity: Activity, tool: ToolKind? = nil, seconds: TimeInterval = 15) {
+        demoInfo = SessionInfo(id: "demo", activity: activity, recentTool: tool, project: nil)
+        demoUntil = simTime + seconds
+    }
+
+    /// …or reacts to a moment together.
+    func demoPulse(_ p: Pulse) {
+        demoInfo = nil
+        buddies.forEach { $0.pulse(p) }
+    }
+
+    func startDanceParty(seconds: TimeInterval) {
+        demoInfo = nil
+        buddies.forEach { $0.startDancing(for: seconds) }
+    }
+
+    var extraBuddyCount: Int { buddies.filter { !$0.isMain && !$0.isLeaving }.count }
+
+    /// Sends every extra buddy off-screen; the main buddy stays.
+    func dismissExtras() {
+        for b in buddies where !b.isMain {
+            if let id = b.sessionID { dismissedSessions.insert(id) }
+            b.beginLeaving()
+        }
     }
 
     func forceSleep() {
@@ -157,6 +193,7 @@ final class BuddyStage: NSView {
     func advance(_ dt: TimeInterval) {
         frames += 1
         simTime += dt
+        if demoInfo != nil && simTime > demoUntil { demoInfo = nil }
 
         syncClock += dt
         if syncClock > 0.25 {
@@ -197,7 +234,9 @@ final class BuddyStage: NSView {
             for b in buddies where !b.isMain { b.beginLeaving() }
             return
         }
-        let sessions = sessionsProvider()
+        let all = sessionsProvider()
+        dismissedSessions.formIntersection(all.map(\.id))  // Forget sessions that ended.
+        let sessions = all.filter { !dismissedSessions.contains($0.id) || $0.id == main.sessionID }
         let byID = Dictionary(uniqueKeysWithValues: sessions.map { ($0.id, $0) })
 
         for b in buddies {

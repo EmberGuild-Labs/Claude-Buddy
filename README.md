@@ -31,7 +31,8 @@ A tiny pixel-art Claude critter that lives along the bottom of your Mac's screen
 - **Climbs your windows.** The top edge of any app window (Finder, Terminal, anything) is a ledge. Idle buddies leap up onto one, stroll along it, sit, and hop back down. Drag the window and they ride along; close or minimize it and they tumble off. They only stand on the parts of an edge you can see, not the parts hidden behind other windows. You can also ⌥-drag a buddy and drop it onto a window.
 - **Buddies together:**
   - Buddies that meet **high-five**.
-  - Now and then idle buddies play **tag**. The one being chased leaps over whoever's "it" when cornered.
+  - Now and then idle buddies play **tag**. The tagger dashes away, and the new "it" counts to three before chasing. There are no tag-backs for a couple of seconds, and a buddy that's cornered leaps over whoever's "it".
+  - When a session finishes, its buddy celebrates and the other idle buddies **cheer** from the sidelines.
   - When two or more sessions **finish around the same time**, everyone forms a **conga line**. Buddies up on windows jump down to join.
   - **Piggyback:** ⌥-drag one buddy and drop it on another's head to ride along. Stacks go three high.
 - **Dances to your music.** When Spotify or Apple Music is playing, idle buddies dance in sync with floating music notes, and standing buddies bob along. Hover the main buddy while it dances to see the song. The apps don't report tempo, so each song gets a steady made-up beat (96–132 BPM, the same every time for a given song) instead of real beat-matching. Buddies start dancing the next time you press play, skip, or pause.
@@ -116,7 +117,8 @@ Menu-bar menu:
 | Climb onto Windows | Let buddies hop onto app windows |
 | Dance to Music | Dance when Spotify or Apple Music is playing |
 | Display | Walk on the main display, or follow the mouse between displays |
-| Try an Animation | Preview every reaction without Claude Code. Includes "Add a Session Buddy" (a fake 30 s session), "Dance Party" (pretend music), "Game of Tag", and "Conga Line"; the games bring in pretend playmates if needed |
+| Try an Animation | Preview reactions without Claude Code. **Every buddy** acts out the demo together (thinking, typing, waving for permission, celebrating, dancing…). Also includes "Game of Tag", "Conga Line" (both bring in pretend playmates if needed), and "Add a Session Buddy" (a pretend 30 s session) |
+| Dismiss Extra Buddies | Sends every extra buddy off-screen and keeps the main one. Pretend demo sessions end. Real sessions keep running without a buddy (their events go to the main buddy) until you start a new session |
 | Install / Remove Claude Code Hooks | Add or remove the hooks in `~/.claude/settings.json` |
 | Launch at Login | Start automatically |
 

@@ -35,12 +35,12 @@ final class Buddy {
 
     private enum Mode: Equatable {
         case stand, sit, walk, sleep, wake, work(ToolKind), alert, hello, celebrate, pet, dizzy
-        case held, tossed, arrive, chase, leap, dance, highFive, tag, conga, ride
+        case held, tossed, arrive, chase, leap, dance, highFive, tag, conga, ride, cheer
 
         /// Reactions play to the end instead of being interrupted by Claude activity.
         var isReaction: Bool {
             switch self {
-            case .wake, .hello, .celebrate, .pet, .dizzy, .held, .tossed, .arrive, .leap, .highFive, .ride: true
+            case .wake, .hello, .celebrate, .pet, .dizzy, .held, .tossed, .arrive, .leap, .highFive, .ride, .cheer: true
             default: false
             }
         }
@@ -62,7 +62,9 @@ final class Buddy {
         }
     }
     private var gravity: CGFloat { 2200 * s }
-    private var activity: Activity { info?.activity ?? .idle }
+    /// Its session — or, while a menu demo runs, the demo everyone acts out together.
+    private var currentInfo: SessionInfo? { isLeaving ? nil : (stage.demoInfo ?? info) }
+    private var activity: Activity { currentInfo?.activity ?? .idle }
 
     private var mode: Mode = .stand
     private var modeTime: TimeInterval = 0
@@ -101,6 +103,9 @@ final class Buddy {
     private var pendingGame: PendingGame?
     private var gameFreeze: TimeInterval = 0
     private var congaIndex = 0
+    /// No tag-backs: whoever just tagged it is safe for a moment.
+    private weak var tagBackBlocked: Buddy?
+    private var tagBackUntil: TimeInterval = 0
     private weak var partner: Buddy?
     private var highFiveLeads = false
     /// Only a buddy you drop can land on another's head (not one hopping off or tumbling).
@@ -274,10 +279,24 @@ final class Buddy {
         leap(toX: clampX(pos.x + .random(in: -60...60) * s, floor: true), y: stage.groundY)
     }
 
-    /// Just got tagged: now it's "it".
-    func gotTagged() {
-        gameFreeze = 0.7
+    /// Just got tagged: now it's "it". Count to three before chasing, and no tag-backs.
+    func gotTagged(by tagger: Buddy) {
+        gameFreeze = 1.2
+        tagBackBlocked = tagger
+        tagBackUntil = clock + 1.2 + 2.0
         hop(220)
+    }
+
+    /// Another session finished: a quick cheer from the sidelines.
+    func cheer() {
+        guard activity == .idle, !mode.isReaction, !isLeaving, onGround, mode != .tag, mode != .conga else { return }
+        enter(.cheer, duration: 1.0)
+    }
+
+    /// Menu demo: dance right away.
+    func startDancing(for seconds: TimeInterval) {
+        guard !isLeaving, !mode.isReaction else { return }
+        enter(.dance, duration: seconds)
     }
 
     func joinConga(index: Int) {
@@ -345,7 +364,7 @@ final class Buddy {
             enter(.alert, duration: .infinity)
         case .thinking, .tool:
             var kind: ToolKind?
-            if case .tool(let k) = activity { kind = k } else { kind = info?.recentTool }
+            if case .tool(let k) = activity { kind = k } else { kind = currentInfo?.recentTool }
             if let kind, !lastWorkWasAct {
                 lastWorkWasAct = true
                 enter(.work(kind), duration: .random(in: 2.4...4.2))
@@ -465,7 +484,7 @@ final class Buddy {
         case .celebrate: stage.confetti(at: CGPoint(x: pos.x, y: pos.y + 8 * pixel), colors: isMain ? stage.seasonalConfetti : nil)
         case .pet: hearts(3)
         case .dizzy: orbitStars()
-        case .hello, .wake: hop(300)
+        case .hello, .wake, .cheer: hop(300)
         case .alert: faceCursor()
         default: break
         }
@@ -589,14 +608,21 @@ final class Buddy {
         if gameFreeze > 0 { gameFreeze -= dt; return }
         let others = stage.buddies.filter { $0 !== self && $0.isInTag }
         if stage.tagIt === self {
-            guard let target = others.min(by: { abs($0.pos.x - pos.x) < abs($1.pos.x - pos.x) }) else { return }
+            // Chase the nearest player, preferring anyone but the one who just tagged it.
+            let blocked = clock < tagBackUntil ? tagBackBlocked : nil
+            let candidates = others.count > 1 ? others.filter { $0 !== blocked } : others
+            guard let target = candidates.min(by: { abs($0.pos.x - pos.x) < abs($1.pos.x - pos.x) }) else { return }
             let dx = target.pos.x - pos.x
             facing = dx >= 0 ? 1 : -1
-            pos.x = clampX(pos.x + facing * min(abs(dx), 150 * s * dt))
-            if abs(dx) < halfWidth * 1.3 && abs(target.pos.y - pos.y) < 30 * s {
+            pos.x = clampX(pos.x + facing * min(abs(dx), 140 * s * dt))
+            if target !== blocked && abs(dx) < halfWidth * 1.3 && abs(target.pos.y - pos.y) < 30 * s {
                 stage.tagged(target)
-                target.gotTagged()
-                gameFreeze = 1.0
+                target.gotTagged(by: self)
+                // Dash away from the new "it" right away.
+                facing = dx >= 0 ? -1 : 1
+                vel = CGVector(dx: facing * 240 * s, dy: 280 * s)
+                onGround = false
+                platform = -1
                 stage.floatingEffect(BuddyArt.star, at: CGPoint(x: (pos.x + target.pos.x) / 2, y: pos.y + 8 * pixel),
                                      dx: 0, dy: 16 * s, duration: 0.5)
             }
@@ -999,7 +1025,7 @@ final class Buddy {
         case .hello:
             p.arms = Int(clock * 5) % 2 == 0 ? .waveHigh : .waveLow
             p.eyes = .happy
-        case .celebrate:
+        case .celebrate, .cheer:
             p.arms = .up
             p.eyes = .happy
         case .pet:
