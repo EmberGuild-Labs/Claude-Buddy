@@ -6,6 +6,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let server = EventServer(port: Settings.port)
     private var overlay: OverlayController?
     private var menu: MenuController?
+    private var school: SchoolStore?
+    private var schoolWindows: SchoolWindows?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         if let id = Bundle.main.bundleIdentifier,
@@ -19,7 +21,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         server.onEvent = { [weak self] event in self?.activity.handle(event) }
         server.statusProvider = { [weak overlay] in overlay?.stage.status ?? [:] }
         do { try server.start() } catch { NSLog("Claude Buddy: server failed to start: \(error)") }
-        menu = MenuController(settings: settings, activity: activity, overlay: overlay, server: server)
+        let school = SchoolStore()
+        let windows = SchoolWindows(store: school)
+        school.onReminder = { [weak overlay] r in overlay?.stage.showReminder(r) }
+        overlay.stage.onOpenReminder = { r in
+            if let url = r.url { NSWorkspace.shared.open(url) } else { windows.showToday() }
+        }
+        self.school = school
+        schoolWindows = windows
+        menu = MenuController(settings: settings, activity: activity, overlay: overlay, server: server,
+                              school: school, schoolWindows: windows)
         self.overlay = overlay
     }
 }
@@ -34,6 +45,12 @@ func argument(after flag: String) -> String? {
     return args[i + 1]
 }
 
+#if DEBUG
+if let file = argument(after: "--render-today") {
+    MainActor.assumeIsolated { TodayPreview.render(to: URL(fileURLWithPath: file)) }
+    exit(0)
+}
+#endif
 if args.contains("--self-test") {
     exit(SelfTest.run())
 }

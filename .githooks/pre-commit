@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Refuses to commit anything that looks like a secret: Canvas access tokens, GitHub/Anthropic/
+# OpenAI/AWS keys, bearer tokens, or private keys. Claude Buddy keeps your Canvas token in the
+# macOS Keychain, so it should never appear in the code — this is a safety net.
+#
+# Enabled per clone with:  git config core.hooksPath .githooks
+set -euo pipefail
+
+patterns=(
+  '[0-9]{1,6}~[A-Za-z0-9]{30,}'                  # Canvas access token (e.g. 1234~AbC…)
+  'gh[pousr]_[A-Za-z0-9]{30,}'                   # GitHub tokens
+  'github_pat_[A-Za-z0-9_]{30,}'                 # GitHub fine-grained tokens
+  'sk-ant-[A-Za-z0-9_-]{20,}'                    # Anthropic API keys
+  'sk-(proj-)?[A-Za-z0-9]{32,}'                  # OpenAI API keys
+  'AKIA[0-9A-Z]{16}'                             # AWS access key IDs
+  'Bearer [A-Za-z0-9._~+/=-]{30,}'               # Hard-coded bearer tokens
+  '-----BEGIN ([A-Z]+ )?PRIVATE KEY-----'        # Private keys
+)
+regex="$(IFS='|'; echo "${patterns[*]}")"
+
+# Only look at lines being added in this commit.
+hits="$(git diff --cached -U0 --no-color | grep -E '^\+[^+]' | grep -En -- "$regex" || true)"
+if [[ -n "$hits" ]]; then
+  echo "✋ Commit blocked: this looks like a secret (API key or access token):" >&2
+  echo "$hits" | sed -E 's/([A-Za-z0-9~_-]{6})[A-Za-z0-9~_-]{10,}/\1…(hidden)/g' | head -5 >&2
+  echo "" >&2
+  echo "Remove it from the file (Claude Buddy stores your Canvas token in the Keychain, not in code)." >&2
+  exit 1
+fi
+
+# Also refuse secret-looking files outright.
+files="$(git diff --cached --name-only --diff-filter=A | grep -Ei '(^|/)(\.env(\..*)?|.*\.(pem|p12|key)|.*token.*\.(txt|json))$' || true)"
+if [[ -n "$files" ]]; then
+  echo "✋ Commit blocked: these files look like they hold secrets:" >&2
+  echo "$files" >&2
+  exit 1
+fi

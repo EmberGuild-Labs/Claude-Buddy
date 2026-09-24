@@ -36,6 +36,11 @@ A tiny pixel-art Claude critter that lives along the bottom of your Mac's screen
   - When two or more sessions **finish around the same time**, everyone forms a **conga line**. Buddies up on windows jump down to join.
   - **Piggyback:** ⌥-drag one buddy and drop it on another's head to ride along. Stacks go three high.
 - **Dances to your music.** When Spotify or Apple Music is playing, idle buddies dance in sync with floating music notes, and standing buddies bob along. Hover the main buddy while it dances to see the song. The apps don't report tempo, so each song gets a steady made-up beat (96–132 BPM, the same every time for a given song) instead of real beat-matching. Buddies start dancing the next time you press play, skip, or pause.
+- **Canvas: what's due, and reminders.** Connect your school's Canvas and:
+  - Open **Today** from the menu bar (⌘T while the menu is open) to see missing work, what's due today, tomorrow, and this week, whether each item is submitted, and your current grades. Click any item to open it in Canvas.
+  - The main buddy **holds up a sign** a day, 3 hours, and 1 hour before each unfinished assignment is due. The last one is urgent: it gets a red border and the buddy hops for attention.
+  - Once a day it gives you a heads-up about missing work. A pile of old missing assignments becomes one reminder, not a flood.
+  - ⌥-click the sign to open that assignment.
 - **Hats and seasons.** Session buddies wear party hats, top hats, beanies, cowboy hats, crowns, propeller caps and flowers. The main buddy dresses for the season:
 
   | When | Main buddy |
@@ -101,6 +106,15 @@ Then use the menu-bar icon → **Install Claude Code Hooks…**, or run `/Applic
 
 Optionally, turn on **Launch at Login** from the menu.
 
+## Connecting Canvas
+
+1. In Canvas (in your browser), go to **Account → Settings** and click **+ New Access Token**. Name it "Claude Buddy", generate it, and copy the token.
+2. Menu-bar icon → **Connect Canvas…**. Enter your school's Canvas address (e.g. `yourschool.instructure.com`), paste the token, and click **Connect**.
+
+**Where your token goes:** it's stored in your Mac's **Keychain**. It's never written to a file, a log, or this repo, and it's only ever sent over HTTPS to the Canvas address you entered. **Disconnect** deletes it. Canvas data stays on your Mac, and it refreshes every 15 minutes and when your Mac wakes.
+
+If your school doesn't let students create access tokens, the Connect button will say so. PowerSchool isn't supported: it has no API students can use.
+
 ## Usage
 
 Menu-bar menu:
@@ -108,6 +122,9 @@ Menu-bar menu:
 | Item | What it does |
 |---|---|
 | Status lines | What Claude is doing, whether hooks are installed, where the floor is, and server status |
+| Today… | Your Canvas assignments, missing work, and grades |
+| Canvas: N due today · N missing | Quick status (once connected) |
+| Connect Canvas… / Canvas Settings… | Connect or disconnect Canvas; turn due-date reminders on or off |
 | Show Buddy | Hide or show the buddy (hiding also pauses its frame loop) |
 | Quiet Mode | Ignore Claude Code events; the buddy just wanders |
 | Size | Small / Medium / Large |
@@ -142,6 +159,10 @@ Claude Code ──hook (curl)──▶ 127.0.0.1:47823 ──▶ ClaudeActivity 
 | `main.swift` | App delegate, plus command-line flags (`--install-hooks`, `--uninstall-hooks`, `--render-icon`, `--render-sprites`) |
 | `Overlay.swift` | The full-screen click-through `NSPanel`, floor placement (Dock top vs. screen bottom), and window ledge detection |
 | `MusicWatcher.swift` | Knows when Spotify or Apple Music is playing, from their system-wide notifications |
+| `Canvas.swift` | Canvas REST client (planner items, missing submissions, course grades) and parsing |
+| `School.swift` | Refreshing Canvas data, and the reminder rules (when the buddy holds up a sign) |
+| `SchoolUI.swift` | The Today panel and Canvas settings window (SwiftUI) |
+| `Keychain.swift` | Stores the Canvas token in the macOS Keychain |
 | `SelfTest.swift` | `--self-test`: simulates sessions, ledges, games, piggyback and dancing off-screen, and checks the results |
 | `BuddyStage.swift` | The whole-screen stage holding all the buddies: one display link, matching sessions to buddies, window ledges, games (tag, conga), the shared beat, cursor tracking, ⌥-mouse routing, effects |
 | `Buddy.swift` | One buddy: behavior state machine, physics (floor, ledges, leaps, piggyback), cursor reactions, games, dancing, poses, name tag |
@@ -190,6 +211,9 @@ Debugging: `curl http://127.0.0.1:47823/claude-buddy/status` returns a JSON snap
 - **Window ledges:** the app lists on-screen windows front to back, and each window's top edge becomes a ledge minus any part covered by a window in front of it. Reading window positions needs no permissions. It rescans about once a second, or 20 times a second while a buddy is on or leaping between windows, so riding a dragged window stays smooth. A scan takes about 0.4 ms, and it stops while the display sleeps. To make this work, the overlay now covers the whole screen but still passes every click through.
 - **Music without permissions:** Spotify and Apple Music announce play and pause through system-wide notifications, which any app can listen to. Asking the players directly would trigger a permission prompt, and real beat detection would need to record system audio. Neither seemed worth it for a desktop pet.
 - **Games are coordinated by the stage:** it decides when tag or a conga line happens and who's "it". Each buddy only plays its own part, and drops out if its Claude session gets busy.
+- **Canvas via a personal access token:** it gives the full picture (submitted/missing status, grades, and the planner) through Canvas's documented API: `/api/v1/planner/items`, `/api/v1/users/self/missing_submissions`, and `/api/v1/courses?include[]=total_scores`. The Canvas address is always forced to `https`, and pagination links are only followed on that same host, so the token can't leak to another server.
+- **Reminder rules** live in `ReminderPlanner`, a pure function the self-test checks. Each reminder fires once, tracked by key: only the latest applicable warning fires (24 h, 3 h, or 1 h), submitted or checked-off work is skipped, and at most 3 signs appear per check.
+- **No secrets in git:** a pre-commit hook (`.githooks/pre-commit`) blocks commits containing anything that looks like a Canvas token, GitHub/Anthropic/OpenAI/AWS key, bearer token, or private key. `.gitignore` also excludes `.env` and key files. Turn it on in your clone with `git config core.hooksPath .githooks`.
 - **Cursor reactions without special permissions:** the frame loop just reads the cursor position. A "fast swipe" is detected along the cursor's path between frames, so it still works at the 15 fps idle rate. Only the closest buddy comes over to play, and there are cooldowns so it doesn't get clingy.
 
 ## Development

@@ -20,10 +20,17 @@ If `swift` is missing, the user needs to run `xcode-select --install` themselves
 Uninstall: `/Applications/ClaudeBuddy.app/Contents/MacOS/ClaudeBuddy --uninstall-hooks`, quit the
 app from its menu, then delete `/Applications/ClaudeBuddy.app`.
 
+## Secrets
+
+The Canvas token lives only in the macOS Keychain (`Keychain.swift`). Never write tokens or API keys
+into source, tests, fixtures, or docs. Enable the secret-blocking hook in a clone with
+`git config core.hooksPath .githooks`.
+
 ## Developing
 
 - Build: `swift build`. App bundle: `./scripts/build-app.sh [--install] [--universal] [--zip]`.
 - Preview art: `.build/debug/ClaudeBuddy --render-sprites /tmp/sprites.png`
+- Today panel preview (debug builds only): `.build/debug/ClaudeBuddy --render-today /tmp/today.png`
 - Behavior tests: `swift build && .build/debug/ClaudeBuddy --self-test` (must print "All checks passed.";
   it simulates on a fake clock, so it's fast and works even while the display is asleep). Run it after
   touching `Buddy.swift` or `BuddyStage.swift`.

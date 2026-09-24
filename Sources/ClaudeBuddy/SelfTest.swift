@@ -151,7 +151,119 @@ enum SelfTest {
         simulate(4)
         check("a new session still gets a buddy", stage.buddies.count == 2, "count=\(stage.buddies.count)")
 
+        // 11. Canvas: address cleanup, parsing, reminders, and the buddy's sign. Sample data only.
+        check("Canvas address is cleaned up and forced to https",
+              CanvasClient.normalize("http://Canvas.Example.edu/courses/12?x=1")?.absoluteString == "https://canvas.example.edu"
+                && CanvasClient.normalize("school.instructure.com")?.absoluteString == "https://school.instructure.com"
+                && CanvasClient.normalize("not a url") == nil)
+        check("Canvas pagination link is followed",
+              CanvasClient.nextLink(#"<https://s.instructure.com/api/v1/x?page=1>; rel="current", <https://s.instructure.com/api/v1/x?page=2>; rel="next""#)?
+                .absoluteString == "https://s.instructure.com/api/v1/x?page=2")
+
+        let base = URL(string: "https://school.instructure.com")!
+        let now = Date()
+        let iso = ISO8601DateFormatter()
+        let sampleCourses: [[String: Any]] = [
+            ["id": 7, "name": "AP Chemistry - Period 3", "enrollments": [["type": "student", "computed_current_score": 91.5, "computed_current_grade": "A-"]]],
+        ]
+        let samplePlanner: [[String: Any]] = [
+            ["plannable_type": "assignment", "plannable_id": 1, "course_id": 7, "html_url": "/courses/7/assignments/1",
+             "plannable": ["title": "Lab Report", "due_at": iso.string(from: now.addingTimeInterval(40 * 60))],
+             "submissions": ["submitted": false, "missing": false, "late": false]],
+            ["plannable_type": "assignment", "plannable_id": 2, "course_id": 7, "context_name": "AP Chemistry - Period 3",
+             "plannable": ["title": "Worksheet", "due_at": iso.string(from: now.addingTimeInterval(5 * 3600))],
+             "submissions": ["submitted": true]],
+            ["plannable_type": "quiz", "plannable_id": 3, "course_id": 7,
+             "plannable": ["title": "Unit Quiz", "due_at": iso.string(from: now.addingTimeInterval(20 * 3600))],
+             "submissions": false, "planner_override": ["marked_complete": false]],
+        ]
+        let sampleMissing: [[String: Any]] = [
+            ["id": 9, "name": "Old Essay", "course_id": 7, "due_at": iso.string(from: now.addingTimeInterval(-3 * 86_400)),
+             "html_url": "https://school.instructure.com/courses/7/assignments/9"],
+        ]
+        let grades = CanvasClient.parseGrades(sampleCourses)
+        let names = Dictionary(uniqueKeysWithValues: grades.map { ($0.id, $0.name) })
+        let upcoming = CanvasClient.parsePlanner(samplePlanner, base: base, courseNames: names)
+        let missingItems = CanvasClient.parseMissing(sampleMissing, base: base, courseNames: names)
+        check("Canvas planner items parse with course names, status, and links",
+              upcoming.count == 3 && upcoming[0].title == "Lab Report" && upcoming[0].course == "AP Chemistry - Period 3"
+                && upcoming[0].url?.absoluteString == "https://school.instructure.com/courses/7/assignments/1"
+                && upcoming[1].submitted && !upcoming[0].submitted, "\(upcoming)")
+        check("Canvas grades and missing work parse",
+              grades.first?.grade == "A-" && grades.first?.score == 91.5 && missingItems.first?.missing == true
+                && missingItems.first?.course == "AP Chemistry - Period 3")
+
+        let snap = SchoolSnapshot(userName: "Sam", upcoming: upcoming, missing: missingItems, grades: grades, fetchedAt: now)
+        var fired = Set<String>()
+        let first = ReminderPlanner.due(now: now, snapshot: snap, fired: fired)
+        let shown = first.filter { !$0.text.isEmpty }
+        fired.formUnion(first.map(\.key))
+        check("reminders: missing work, the 1-hour warning, and the next-day quiz (not submitted work)",
+              shown.contains { $0.text == "Missing: Old Essay" && $0.urgent }
+                && shown.contains { $0.text.hasPrefix("AP Chemistry: Lab Report — due in") && $0.urgent }
+                && shown.contains { $0.text.hasPrefix("AP Chemistry: Unit Quiz") && !$0.urgent }
+                && !shown.contains { $0.text.contains("Worksheet") }, "\(shown.map(\.text))")
+        check("reminders don't repeat", ReminderPlanner.due(now: now.addingTimeInterval(60), snapshot: snap, fired: fired)
+                .filter { !$0.text.isEmpty }.isEmpty)
+
+        var pile = snap
+        pile.missing = (1...12).map { var m = SchoolItem(id: "a\($0)", title: "Thing \($0)", course: "", due: nil, url: nil, kind: "assignment"); m.missing = true; return m }
+        let flood = ReminderPlanner.due(now: now, snapshot: pile, fired: []).filter { !$0.text.isEmpty }
+        check("a pile of missing work becomes one reminder, not twelve",
+              flood.filter { $0.text.contains("missing") || $0.text.hasPrefix("Missing") }.count == 1
+                && flood.contains { $0.text == "You have 12 missing assignments" }, "\(flood.map(\.text))")
+
+        let main2 = stage.buddies[0]
+        stage.showReminder(Reminder(key: "t", text: "Test sign", urgent: false, url: nil))
+        simulate(10, until: { main2.signReminder != nil })
+        check("the main buddy holds up the reminder sign", main2.signReminder?.text == "Test sign")
+
         print(failures == 0 ? "All checks passed." : "\(failures) check(s) failed.")
         return failures == 0 ? 0 : 1
     }
 }
+
+#if DEBUG
+import SwiftUI
+
+/// Debug builds: `ClaudeBuddy --render-today out.png` renders the Today panel with sample data.
+enum TodayPreview {
+    @MainActor
+    static func render(to url: URL) {
+        _ = NSApplication.shared
+        let now = Date()
+        func item(_ id: String, _ title: String, _ course: String, hours: Double, submitted: Bool = false, kind: String = "assignment") -> SchoolItem {
+            var i = SchoolItem(id: id, title: title, course: course, due: now.addingTimeInterval(hours * 3600), url: nil, kind: kind)
+            i.submitted = submitted
+            return i
+        }
+        var missing = item("m", "Chapter 4 Reading Questions", "English 11 - Period 2", hours: -50)
+        missing.missing = true
+        let snap = SchoolSnapshot(userName: "Preview", upcoming: [
+            item("1", "Lab Report: Titration", "AP Chemistry - Period 3", hours: 0.7),
+            item("2", "Worksheet 3.2", "Algebra II - Period 1", hours: 2, submitted: true),
+            item("3", "Unit 2 Quiz", "US History - Period 5", hours: 20, kind: "quiz"),
+            item("4", "Essay Draft", "English 11 - Period 2", hours: 70),
+            item("5", "Discussion: Industrial Revolution", "US History - Period 5", hours: 96, kind: "discussion_topic"),
+        ], missing: [missing], grades: [
+            CourseGrade(id: 1, name: "AP Chemistry - Period 3", score: 91.5, grade: "A-"),
+            CourseGrade(id: 2, name: "Algebra II - Period 1", score: 87.2, grade: "B+"),
+            CourseGrade(id: 3, name: "English 11 - Period 2", score: nil, grade: nil),
+        ], fetchedAt: now.addingTimeInterval(-120))
+        let store = SchoolStore()
+        store.usePreview(snap)
+        let size = NSSize(width: 420, height: 640)
+        let host = NSHostingView(rootView: TodayView(store: store, hover: HoverState(), connect: {}))
+        host.frame = NSRect(origin: .zero, size: size)
+        let window = NSWindow(contentRect: NSRect(origin: CGPoint(x: -10_000, y: -10_000), size: size),
+                              styleMask: [.titled], backing: .buffered, defer: false)
+        window.contentView = host
+        window.appearance = NSAppearance(named: CommandLine.arguments.contains("--dark") ? .darkAqua : .aqua)
+        // Let SwiftUI lay out and draw.
+        for _ in 0..<5 { RunLoop.main.run(until: Date().addingTimeInterval(0.1)); host.layoutSubtreeIfNeeded() }
+        guard let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { return }
+        host.cacheDisplay(in: host.bounds, to: rep)
+        try? rep.representation(using: .png, properties: [:])?.write(to: url)
+    }
+}
+#endif

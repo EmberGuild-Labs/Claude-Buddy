@@ -30,17 +30,20 @@ final class Buddy {
     private let bubble = CALayer()
     private let orbit = CALayer()
     private let tag = CATextLayer()
+    /// A little board it holds up for reminders ("Essay — due in 45 min").
+    private let signBoard = CATextLayer()
+    private(set) var signReminder: Reminder?
     private var tagText: String?
     private var currentImage: CGImage?
 
     private enum Mode: Equatable {
         case stand, sit, walk, sleep, wake, work(ToolKind), alert, hello, celebrate, pet, dizzy
-        case held, tossed, arrive, chase, leap, dance, highFive, tag, conga, ride, cheer
+        case held, tossed, arrive, chase, leap, dance, highFive, tag, conga, ride, cheer, sign
 
         /// Reactions play to the end instead of being interrupted by Claude activity.
         var isReaction: Bool {
             switch self {
-            case .wake, .hello, .celebrate, .pet, .dizzy, .held, .tossed, .arrive, .leap, .highFive, .ride, .cheer: true
+            case .wake, .hello, .celebrate, .pet, .dizzy, .held, .tossed, .arrive, .leap, .highFive, .ride, .cheer, .sign: true
             default: false
             }
         }
@@ -135,7 +138,17 @@ final class Buddy {
         self.hat = hat
         pos = CGPoint(x: x, y: stage.groundY)
 
-        for l in [root, sprite, bubble, orbit, tag] { l.actions = BuddyStage.noActions }
+        for l in [root, sprite, bubble, orbit, tag, signBoard] { l.actions = BuddyStage.noActions }
+        root.addSublayer(signBoard)
+        signBoard.anchorPoint = CGPoint(x: 0.5, y: 0)
+        signBoard.alignmentMode = .center
+        signBoard.isWrapped = true
+        signBoard.foregroundColor = CGColor(srgbRed: 0.17, green: 0.11, blue: 0.09, alpha: 1)
+        signBoard.backgroundColor = CGColor(srgbRed: 1, green: 0.99, blue: 0.96, alpha: 1)
+        signBoard.borderColor = CGColor(srgbRed: 0.17, green: 0.11, blue: 0.09, alpha: 1)
+        signBoard.cornerRadius = 3
+        signBoard.zPosition = 5
+        signBoard.isHidden = true
         root.addSublayer(sprite)
         root.addSublayer(orbit)
         root.addSublayer(bubble)
@@ -291,6 +304,21 @@ final class Buddy {
     func cheer() {
         guard activity == .idle, !mode.isReaction, !isLeaving, onGround, mode != .tag, mode != .conga else { return }
         enter(.cheer, duration: 1.0)
+    }
+
+    /// Can it hold up a reminder sign right now? (Not while flying, riding, or mid-game.)
+    var canHoldSign: Bool {
+        guard !isLeaving, onGround, carrier == nil, rider == nil else { return false }
+        switch mode {
+        case .held, .tossed, .arrive, .leap, .ride, .celebrate, .tag, .conga, .sign, .highFive: return false
+        default: return true
+        }
+    }
+
+    func showSign(_ reminder: Reminder) {
+        signReminder = reminder
+        facing = stage.mouse.map { $0.x >= pos.x ? 1 : -1 } ?? facing
+        enter(.sign, duration: reminder.urgent ? 10 : 8)
     }
 
     /// Menu demo: dance right away.
@@ -566,6 +594,16 @@ final class Buddy {
             tickConga(dt)
         case .ride:
             if modeTime >= modeDuration { hopOffCarrier() }
+        case .sign:
+            effectClock += dt
+            if signReminder?.urgent == true && effectClock > 2.5 && onGround && !stage.reduceMotion {
+                effectClock = 0
+                hop(200)
+            }
+            if modeTime >= modeDuration {
+                signReminder = nil
+                chooseNext()
+            }
         case .held, .tossed, .arrive, .leap:
             break
         case .work(let kind):
@@ -965,6 +1003,34 @@ final class Buddy {
         root.position = CGPoint(x: pos.x.rounded(), y: pos.y.rounded())
         updateBubble()
         updateTag()
+        updateSign()
+    }
+
+    private func updateSign() {
+        guard mode == .sign, let reminder = signReminder else {
+            signBoard.isHidden = true
+            return
+        }
+        if signBoard.string as? String != reminder.text {
+            let font = NSFont.systemFont(ofSize: max(11, 12 * s), weight: .semibold)
+            let maxWidth: CGFloat = 230 * max(1, s)
+            let bounds = (reminder.text as NSString).boundingRect(
+                with: NSSize(width: maxWidth - 16, height: 200), options: [.usesLineFragmentOrigin], attributes: [.font: font])
+            signBoard.string = reminder.text
+            signBoard.font = font
+            signBoard.fontSize = font.pointSize
+            signBoard.contentsScale = stage.window?.backingScaleFactor ?? 2
+            signBoard.bounds = CGRect(x: 0, y: 0, width: ceil(bounds.width) + 16, height: ceil(bounds.height) + 10)
+            signBoard.borderWidth = max(2, pixel / 2)
+            signBoard.borderColor = reminder.urgent ? CGColor(srgbRed: 0.84, green: 0.23, blue: 0.23, alpha: 1)
+                                                    : CGColor(srgbRed: 0.17, green: 0.11, blue: 0.09, alpha: 1)
+        }
+        signBoard.isHidden = false
+        // Held just above its raised arms; kept on screen near the top edge.
+        let y = min(12 * pixel, stage.bounds.height - pos.y - signBoard.bounds.height - 4)
+        let half = signBoard.bounds.width / 2
+        let x = min(max(0, half - pos.x + 4), stage.bounds.width - pos.x - half - 4)
+        signBoard.position = CGPoint(x: x.rounded(), y: y.rounded())
     }
 
     private func walkingLegs(fps: Double) -> (Pose.Legs, Int) {
@@ -1028,6 +1094,10 @@ final class Buddy {
         case .celebrate, .cheer:
             p.arms = .up
             p.eyes = .happy
+        case .sign:
+            p.arms = .up  // Holding the sign overhead.
+            p.eyes = signReminder?.urgent == true ? .wide : .open
+            p.look = 0
         case .pet:
             p.eyes = .happy
             p.bob = Int(clock * 6) % 2
@@ -1224,6 +1294,11 @@ final class Buddy {
             platform = -1
             droppedByUser = true
             enter(.tossed, duration: .infinity)
+        } else if mode == .sign, let reminder = signReminder {
+            // ⌥-click the sign to open it.
+            signReminder = nil
+            stage.openReminder(reminder)
+            chooseNext()
         } else {
             lastStimulus = Date()
             chaseCooldown = max(chaseCooldown, 6)

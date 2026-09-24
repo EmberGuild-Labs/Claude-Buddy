@@ -32,7 +32,16 @@ final class BuddyStage: NSView {
     var windowsEnabled = true
     var windowPlatforms: [Int: WindowPlatform] = [:]
     var danceToMusic = true
-    var musicPlaying = false
+    var musicPlaying = false {
+        didSet {
+            // The moment music starts, idle buddies get up and dance.
+            if musicPlaying && !oldValue && danceToMusic {
+                for b in buddies where b.canJoinGame && Double.random(in: 0...1) < 0.8 {
+                    b.startDancing(for: .random(in: 8...14))
+                }
+            }
+        }
+    }
     var musicTrack: String?
     var musicBPM: Double = 112
     /// Shared beat counter, so everyone dances (and congas) in sync.
@@ -86,6 +95,11 @@ final class BuddyStage: NSView {
     /// While a menu demo runs, every buddy acts it out together.
     private(set) var demoInfo: SessionInfo?
     private var demoUntil: TimeInterval = 0
+    /// Reminder signs waiting for the main buddy to be free.
+    private var signQueue: [Reminder] = []
+    /// ⌥-clicking a sign: open its link (or the Today panel).
+    var onOpenReminder: ((Reminder) -> Void)?
+
     /// Sessions whose buddies were dismissed; they don't get one back until the session ends.
     private var dismissedSessions: Set<String> = []
     private var congaRetries = 0
@@ -167,6 +181,14 @@ final class BuddyStage: NSView {
         buddies.forEach { $0.startDancing(for: seconds) }
     }
 
+    /// The main buddy holds up a sign as soon as it's free.
+    func showReminder(_ reminder: Reminder) {
+        guard !signQueue.contains(reminder) else { return }
+        signQueue.append(reminder)
+    }
+
+    func openReminder(_ reminder: Reminder) { onOpenReminder?(reminder) }
+
     var extraBuddyCount: Int { buddies.filter { !$0.isMain && !$0.isLeaving }.count }
 
     /// Sends every extra buddy off-screen; the main buddy stays.
@@ -209,6 +231,7 @@ final class BuddyStage: NSView {
         greetings()
         tickGames(dt)
         tickSnow(dt)
+        if !signQueue.isEmpty, let main, main.canHoldSign { main.showSign(signQueue.removeFirst()) }
 
         CATransaction.begin()
         CATransaction.setDisableActions(true)

@@ -3,3 +3,13 @@ build/
 .swiftpm/
 *.xcodeproj
 .DS_Store
+
+# Secrets never belong in the repo (the Canvas token lives in the macOS Keychain).
+.env
+.env.*
+*.pem
+*.p12
+*.key
+*token*.txt
+*token*.json
+secrets/

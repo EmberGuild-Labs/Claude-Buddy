@@ -8,8 +8,13 @@ final class MenuController: NSObject, NSMenuDelegate {
     private let activity: ClaudeActivity
     private let overlay: OverlayController
     private let server: EventServer
+    private let school: SchoolStore
+    private let schoolWindows: SchoolWindows
 
-    init(settings: Settings, activity: ClaudeActivity, overlay: OverlayController, server: EventServer) {
+    init(settings: Settings, activity: ClaudeActivity, overlay: OverlayController, server: EventServer,
+         school: SchoolStore, schoolWindows: SchoolWindows) {
+        self.school = school
+        self.schoolWindows = schoolWindows
         self.settings = settings
         self.activity = activity
         self.overlay = overlay
@@ -24,6 +29,13 @@ final class MenuController: NSObject, NSMenuDelegate {
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
+
+        let today = item("Today…", #selector(openToday))
+        today.keyEquivalent = "t"
+        menu.addItem(today)
+        if let summary = school.summary { menu.addItem(info(summary)) }
+        menu.addItem(item(school.isConnected ? "Canvas Settings…" : "Connect Canvas…", #selector(openCanvasSettings)))
+        menu.addItem(.separator())
 
         menu.addItem(info("Claude: \(settings.quiet ? "Quiet mode" : activity.summary)"))
         let sessions = activity.liveSessions.count
@@ -171,7 +183,7 @@ final class MenuController: NSObject, NSMenuDelegate {
     private static let demoTitles = [
         "Thinking", "Running a Command", "Editing Code", "Searching Files", "Browsing the Web",
         "Needs Permission", "Task Finished", "Tool Failed", "Fall Asleep",
-        "Dance Party (pretend music)", "Game of Tag", "Conga Line", "Add a Session Buddy",
+        "Dance Party (pretend music)", "Game of Tag", "Conga Line", "Add a Session Buddy", "School Reminder",
     ]
     private var demoSessionCount = 0
 
@@ -192,6 +204,9 @@ final class MenuController: NSObject, NSMenuDelegate {
             stage.startDanceParty(seconds: 12)
         case "Game of Tag": withPlaymates { $0.startTag() }
         case "Conga Line": withPlaymates { $0.startConga() }
+        case "School Reminder":
+            stage.showReminder(Reminder(key: "demo-\(Date().timeIntervalSince1970)",
+                                        text: "Chemistry: Lab Report — due in 45 min", urgent: true, url: nil))
         default: addDemoSession(thinking: true)
         }
     }
@@ -206,6 +221,9 @@ final class MenuController: NSObject, NSMenuDelegate {
             self?.activity.handle(["hook_event_name": "SessionEnd", "session_id": sid])
         }
     }
+
+    @objc private func openToday() { schoolWindows.showToday() }
+    @objc private func openCanvasSettings() { schoolWindows.showSettings() }
 
     @objc private func dismissExtras() {
         activity.endSessions { $0.hasPrefix("demo") }
