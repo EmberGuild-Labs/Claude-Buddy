@@ -4,7 +4,7 @@
 <dict>
     <key>CFBundleName</key><string>Claude Buddy</string>
     <key>CFBundleDisplayName</key><string>Claude Buddy</string>
-    <key>CFBundleIdentifier</key><string>com.blaisebergmark.ClaudeBuddy</string>
+    <key>CFBundleIdentifier</key><string>com.emberguildlabs.ClaudeBuddy</string>
     <key>CFBundleExecutable</key><string>ClaudeBuddy</string>
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundlePackageType</key><string>APPL</string>
