@@ -4,6 +4,8 @@ A tiny pixel-art Claude critter that lives along the bottom of your Mac's screen
 
 ![Buddy sprite sheet](docs/sprites.png)
 
+> An unofficial fan project. It isn't affiliated with or endorsed by Anthropic.
+
 ## Features
 
 - **Stays out of your way.** A transparent, click-through overlay that never becomes the active window. Your keyboard and mouse keep going to the app you're using.
@@ -30,37 +32,53 @@ A tiny pixel-art Claude critter that lives along the bottom of your Mac's screen
 
 ## Requirements
 
-- macOS 14 Sonoma or later (built and tested on macOS 27)
-- Swift 5.10+ toolchain (Xcode or Command Line Tools)
-- Claude Code (CLI or desktop app) for the reactions. Without it the buddy still wanders.
+- A Mac running macOS 14 Sonoma or later (Apple Silicon or Intel)
+- Claude Code (CLI or desktop app) for the reactions. Without it the buddy still wanders around.
 
-## Setup
+## Install
 
-1. **Build and install** the app into `/Applications`:
+Pick whichever is easiest.
 
-   ```bash
-   ./scripts/build-app.sh --install
-   ```
+### Option 1: Ask Claude Code to do it
 
-   Leave off `--install` to only build `build/ClaudeBuddy.app`.
+Paste this into Claude Code:
 
-2. **Launch it:**
+```text
+Install Claude Buddy for me from https://github.com/EmberGuild-Labs/Claude-Buddy.
+Clone it, read its README and CLAUDE.md, then run ./scripts/install.sh. Check that
+`curl http://127.0.0.1:47823/claude-buddy/ping` returns "claude-buddy ok", and tell me to
+restart my other Claude Code sessions so they pick up the new hooks.
+```
 
-   ```bash
-   open /Applications/ClaudeBuddy.app
-   ```
+### Option 2: One-line installer (builds from source)
 
-   A small buddy icon appears in the menu bar and the buddy drops in along the bottom of the screen.
+```bash
+curl -fsSL https://raw.githubusercontent.com/EmberGuild-Labs/Claude-Buddy/main/scripts/install.sh | bash
+```
 
-3. **Connect Claude Code.** From the menu-bar icon, choose **Install Claude Code Hooks…**. This adds hook entries to `~/.claude/settings.json` after backing the file up (`settings.json.claude-buddy-backup-<timestamp>`). Your other settings and hooks are left alone. **Restart any Claude Code sessions that are already open**, because hooks are read when a session starts.
+This downloads the source, builds the app, copies it to `/Applications`, connects Claude Code by adding hooks to `~/.claude/settings.json` (after backing that file up), and launches it. Add `-s -- --no-hooks` after `bash` to skip the Claude Code step.
 
-   Command-line alternative:
+Building needs Apple's free developer tools. If you don't have them, the installer tells you to run `xcode-select --install` first. An app you build yourself opens without any Gatekeeper warnings.
 
-   ```bash
-   /Applications/ClaudeBuddy.app/Contents/MacOS/ClaudeBuddy --install-hooks
-   ```
+### Option 3: Download the app
 
-4. *(Optional)* Turn on **Launch at Login** from the menu.
+1. Download **ClaudeBuddy.zip** from the [latest release](https://github.com/EmberGuild-Labs/Claude-Buddy/releases/latest) and unzip it.
+2. Drag **ClaudeBuddy.app** into **Applications**.
+3. Open it. The app isn't notarized by Apple, so macOS blocks it the first time. Go to **System Settings → Privacy & Security**, scroll down, and click **Open Anyway** next to the Claude Buddy message. (Or run `xattr -dr com.apple.quarantine /Applications/ClaudeBuddy.app` in Terminal.)
+4. Click the buddy icon in the menu bar → **Install Claude Code Hooks…**, then restart any open Claude Code sessions.
+
+### Building it yourself
+
+```bash
+git clone https://github.com/EmberGuild-Labs/Claude-Buddy.git
+cd Claude-Buddy
+./scripts/build-app.sh --install     # builds build/ClaudeBuddy.app and copies it to /Applications
+open /Applications/ClaudeBuddy.app
+```
+
+Then use the menu-bar icon → **Install Claude Code Hooks…**, or run `/Applications/ClaudeBuddy.app/Contents/MacOS/ClaudeBuddy --install-hooks`. Restart any Claude Code sessions that are already open, because hooks are read when a session starts. Your settings are backed up to `settings.json.claude-buddy-backup-<timestamp>`, and your other settings and hooks are left alone.
+
+Optionally, turn on **Launch at Login** from the menu.
 
 ## Usage
 
@@ -147,6 +165,13 @@ echo '{"hook_event_name":"Stop","session_id":"x"}' | \
 ```
 
 The single-instance check and Launch at Login only work from the bundled `.app`.
+
+Making a release (a universal Apple Silicon + Intel build, zipped):
+
+```bash
+./scripts/build-app.sh --universal --zip
+gh release create v1.x.y build/ClaudeBuddy.zip
+```
 
 ## Ideas for later
 
