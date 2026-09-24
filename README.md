@@ -172,6 +172,8 @@ Debugging: `curl http://127.0.0.1:47823/claude-buddy/status` returns a JSON snap
 - **Tool flicker:** fast tools like `Read` start and finish within milliseconds. The buddy remembers the last tool for a few seconds and finishes each 2–4 s "bit" before switching, so animations don't stutter.
 - **Permission prompts:** the buddy waves until the next event for that session arrives. After you approve a long-running command, it may keep waving until that command finishes, because no hook fires in between.
 - **Art:** an original Claude-inspired critter in Claude's clay orange (`#D97757`), drawn procedurally so new poses are a few lines of code. `--render-sprites file.png` writes a contact sheet.
+- **Session buddies:** the main buddy keeps its session until that session ends, so buddies never swap jobs mid-task. Up to 6 extra buddies can appear, and their hats are handed out so no two match. A session with no events for 45 minutes counts as gone, which covers a terminal closed without a clean exit.
+- **Cursor reactions without special permissions:** the frame loop just reads the cursor position. A "fast swipe" is detected along the cursor's path between frames, so it still works at the 15 fps idle rate. Only the closest buddy comes over to play, and there are cooldowns so it doesn't get clingy.
 
 ## Development
 
@@ -192,8 +194,6 @@ Making a release (a universal Apple Silicon + Intel build, zipped):
 gh release create v1.x.y build/ClaudeBuddy.zip
 ```
 
-- **Session buddies:** the main buddy keeps its session until that session ends, so buddies never swap jobs mid-task. Up to 6 extra buddies can appear, and their hats are handed out so no two match. A session with no events for 45 minutes counts as gone, which covers a terminal closed without a clean exit.
-- **Cursor reactions without special permissions:** the frame loop just reads the cursor position. A "fast swipe" is detected along the cursor's path between frames, so it still works at the 15 fps idle rate. Only the closest buddy comes over to play, and there are cooldowns so it doesn't get clingy.
 
 ## Ideas for later
 
