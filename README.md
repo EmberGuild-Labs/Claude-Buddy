@@ -28,6 +28,13 @@ A tiny pixel-art Claude critter that lives along the bottom of your Mac's screen
 - **Pettable.** Hold **⌥ Option** and click the buddy to pet it (hearts ❤️). Hold ⌥ and drag to pick it up, then flick to throw it. It bounces off the screen edges.
 - **Notices your cursor.** Its eyes follow the cursor, and it turns around if the cursor is behind it. Rest the cursor near the buddies and the closest one trots over and hops around playfully. Swipe the mouse fast right past one and it jumps and runs off.
 - **A buddy for every session.** The main buddy acts out your first Claude Code session. Each additional session drops in its own buddy, with its own hat, acting out only that session. So when one waves for permission, you know which session needs you. Hover a buddy to see a name tag with its project folder. When a session ends, its buddy waves and walks off-screen. Buddies that walk into each other stop to wave.
+- **Climbs your windows.** The top edge of any app window (Finder, Terminal, anything) is a ledge. Idle buddies leap up onto one, stroll along it, sit, and hop back down. Drag the window and they ride along; close or minimize it and they tumble off. They only stand on the parts of an edge you can see, not the parts hidden behind other windows. You can also ⌥-drag a buddy and drop it onto a window.
+- **Buddies together:**
+  - Buddies that meet **high-five**.
+  - Now and then idle buddies play **tag**. The one being chased leaps over whoever's "it" when cornered.
+  - When two or more sessions **finish around the same time**, everyone forms a **conga line**. Buddies up on windows jump down to join.
+  - **Piggyback:** ⌥-drag one buddy and drop it on another's head to ride along. Stacks go three high.
+- **Dances to your music.** When Spotify or Apple Music is playing, idle buddies dance in sync with floating music notes, and standing buddies bob along. Hover the main buddy while it dances to see the song. The apps don't report tempo, so each song gets a steady made-up beat (96–132 BPM, the same every time for a given song) instead of real beat-matching. Buddies start dancing the next time you press play, skip, or pause.
 - **Hats and seasons.** Session buddies wear party hats, top hats, beanies, cowboy hats, crowns, propeller caps and flowers. The main buddy dresses for the season:
 
   | When | Main buddy |
@@ -106,8 +113,10 @@ Menu-bar menu:
 | Hat | Seasonal (automatic), a specific hat, or no hat, for the main buddy |
 | Extra Buddy per Session | Turn session buddies off to have the main buddy show all sessions combined |
 | Cursor Reactions | Eye-tracking, coming over to play, and getting startled |
+| Climb onto Windows | Let buddies hop onto app windows |
+| Dance to Music | Dance when Spotify or Apple Music is playing |
 | Display | Walk on the main display, or follow the mouse between displays |
-| Try an Animation | Preview every reaction without Claude Code, including "Add a Session Buddy" (a fake session that lasts 30 s) |
+| Try an Animation | Preview every reaction without Claude Code. Includes "Add a Session Buddy" (a fake 30 s session), "Dance Party" (pretend music), "Game of Tag", and "Conga Line"; the games bring in pretend playmates if needed |
 | Install / Remove Claude Code Hooks | Add or remove the hooks in `~/.claude/settings.json` |
 | Launch at Login | Start automatically |
 
@@ -129,9 +138,11 @@ Claude Code ──hook (curl)──▶ 127.0.0.1:47823 ──▶ ClaudeActivity 
 | File | Role |
 |---|---|
 | `main.swift` | App delegate, plus command-line flags (`--install-hooks`, `--uninstall-hooks`, `--render-icon`, `--render-sprites`) |
-| `Overlay.swift` | The click-through `NSPanel` and floor placement (Dock top vs. screen bottom) |
-| `BuddyStage.swift` | The strip that holds all the buddies: one display link, matching sessions to buddies, cursor tracking, ⌥-mouse routing, effects |
-| `Buddy.swift` | One buddy: behavior state machine, physics, cursor reactions, poses, name tag |
+| `Overlay.swift` | The full-screen click-through `NSPanel`, floor placement (Dock top vs. screen bottom), and window ledge detection |
+| `MusicWatcher.swift` | Knows when Spotify or Apple Music is playing, from their system-wide notifications |
+| `SelfTest.swift` | `--self-test`: simulates sessions, ledges, games, piggyback and dancing off-screen, and checks the results |
+| `BuddyStage.swift` | The whole-screen stage holding all the buddies: one display link, matching sessions to buddies, window ledges, games (tag, conga), the shared beat, cursor tracking, ⌥-mouse routing, effects |
+| `Buddy.swift` | One buddy: behavior state machine, physics (floor, ledges, leaps, piggyback), cursor reactions, games, dancing, poses, name tag |
 | `Hats.swift` | Hat art and the seasonal calendar |
 | `BuddyArt.swift` / `PixelArt.swift` | All pixel art is drawn in code, from part-based `Pose`s, and cached |
 | `ClaudeActivity.swift` | Tracks each session's state and project folder, plus a combined state |
@@ -155,6 +166,7 @@ curl -s -m 1 -o /dev/null -H 'Content-Type: application/json' -H 'Expect:' \
 Hooked events: `SessionStart`, `SessionEnd`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `Notification`, `Stop`, `SubagentStop`.
 
 Health check: `curl http://127.0.0.1:47823/claude-buddy/ping` returns `claude-buddy ok`.
+Behavior tests: `ClaudeBuddy --self-test` runs every buddy behavior on a simulated clock and prints PASS/FAIL (exit code 1 on failure).
 Debugging: `curl http://127.0.0.1:47823/claude-buddy/status` returns a JSON snapshot of every buddy: its mode, hat, session and position, plus the frame count.
 
 ## Notes and decisions
@@ -173,6 +185,9 @@ Debugging: `curl http://127.0.0.1:47823/claude-buddy/status` returns a JSON snap
 - **Permission prompts:** the buddy waves until the next event for that session arrives. After you approve a long-running command, it may keep waving until that command finishes, because no hook fires in between.
 - **Art:** an original Claude-inspired critter in Claude's clay orange (`#D97757`), drawn procedurally so new poses are a few lines of code. `--render-sprites file.png` writes a contact sheet.
 - **Session buddies:** the main buddy keeps its session until that session ends, so buddies never swap jobs mid-task. Up to 6 extra buddies can appear, and their hats are handed out so no two match. A session with no events for 45 minutes counts as gone, which covers a terminal closed without a clean exit.
+- **Window ledges:** the app lists on-screen windows front to back, and each window's top edge becomes a ledge minus any part covered by a window in front of it. Reading window positions needs no permissions. It rescans about once a second, or 20 times a second while a buddy is on or leaping between windows, so riding a dragged window stays smooth. A scan takes about 0.4 ms, and it stops while the display sleeps. To make this work, the overlay now covers the whole screen but still passes every click through.
+- **Music without permissions:** Spotify and Apple Music announce play and pause through system-wide notifications, which any app can listen to. Asking the players directly would trigger a permission prompt, and real beat detection would need to record system audio. Neither seemed worth it for a desktop pet.
+- **Games are coordinated by the stage:** it decides when tag or a conga line happens and who's "it". Each buddy only plays its own part, and drops out if its Claude session gets busy.
 - **Cursor reactions without special permissions:** the frame loop just reads the cursor position. A "fast swipe" is detected along the cursor's path between frames, so it still works at the 15 fps idle rate. Only the closest buddy comes over to play, and there are cooldowns so it doesn't get clingy.
 
 ## Development

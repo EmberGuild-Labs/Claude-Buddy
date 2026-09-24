@@ -1,7 +1,16 @@
 import AppKit
 import QuartzCore
 
-/// The strip along the bottom of the screen where the buddies live.
+/// A window's top edge, as ledges a buddy can stand on (stage coordinates).
+struct WindowPlatform {
+    /// (left edge, top edge) of the window — buddies standing on it ride along when it moves.
+    let origin: CGPoint
+    /// The parts of the top edge not covered by windows in front of it.
+    let segments: [ClosedRange<CGFloat>]
+}
+
+/// The whole screen, where the buddies live: on the floor (Dock or screen bottom) and on
+/// top of app windows.
 ///
 /// Drawn with plain Core Animation layers, composited by the WindowServer, so the app itself
 /// stays nearly idle. One display link drives every buddy. The main buddy is always here;
@@ -19,6 +28,15 @@ final class BuddyStage: NSView {
     var mainHat: Hat = .none { didSet { main?.hat = mainHat } }
     var seasonalConfetti: [CGColor]?
     var snowing = false
+    /// Let buddies hop onto app windows.
+    var windowsEnabled = true
+    var windowPlatforms: [Int: WindowPlatform] = [:]
+    var danceToMusic = true
+    var musicPlaying = false
+    var musicTrack: String?
+    var musicBPM: Double = 112
+    /// Shared beat counter, so everyone dances (and congas) in sync.
+    private(set) var beat: Double = 0
     var sessionsProvider: () -> [SessionInfo] = { [] }
     var aggregateProvider: () -> SessionInfo? = { nil }
 
@@ -54,6 +72,21 @@ final class BuddyStage: NSView {
     private var snowClock: TimeInterval = 0
     private var grabbed: Buddy?
     private var interactive = false
+
+    // Games
+    private(set) weak var tagIt: Buddy?
+    private(set) weak var congaLeader: Buddy?
+    private var gameClock: TimeInterval = 0
+    private var gameCooldown: TimeInterval = .random(in: 60...120)
+    /// Simulation time, advanced by `advance(_:)`.
+    private var simTime: TimeInterval = 0
+    private var recentFinishes: [(session: String, at: TimeInterval)] = []
+    private var pendingConga: TimeInterval?
+    private var congaRetries = 0
+
+    /// True while someone stands on (or is jumping around) windows, so window positions
+    /// should be refreshed quickly for smooth riding.
+    var needsFastWindowUpdates: Bool { buddies.contains { $0.isOnWindow || !$0.onGround } }
 
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -92,7 +125,10 @@ final class BuddyStage: NSView {
 
     var status: [String: Any] {
         ["frames": frames, "fps": currentFPS, "running": isRunning, "groundY": Int(groundY),
-         "width": Int(bounds.width), "buddies": buddies.map(\.status)]
+         "width": Int(bounds.width), "height": Int(bounds.height), "buddies": buddies.map(\.status),
+         "windowLedges": windowPlatforms.count, "music": musicPlaying ? (musicTrack ?? "playing") : "off",
+         "game": tagIt != nil ? "tag" : (congaLeader != nil ? "conga" : "none"),
+         "tagIt": tagIt.flatMap { b in buddies.firstIndex { $0 === b } } ?? -1]
     }
 
     // MARK: - External input
@@ -102,6 +138,7 @@ final class BuddyStage: NSView {
         syncSessions()
         let target = buddies.first { $0.sessionID == session } ?? main
         target?.pulse(p)
+        if p == .finished { noteFinish(session) }
     }
 
     func forceSleep() {
@@ -113,7 +150,13 @@ final class BuddyStage: NSView {
     @objc private func step(_ link: CADisplayLink) {
         let dt = lastTimestamp == 0 ? 1.0 / 30 : min(link.timestamp - lastTimestamp, 0.1)
         lastTimestamp = link.timestamp
+        advance(dt)
+    }
+
+    /// One simulation step. The display link calls this; so does `--self-test`.
+    func advance(_ dt: TimeInterval) {
         frames += 1
+        simTime += dt
 
         syncClock += dt
         if syncClock > 0.25 {
@@ -123,8 +166,11 @@ final class BuddyStage: NSView {
         updateCursor(dt)
         updateInteractivity()
 
-        for b in buddies { b.tick(dt) }
+        beat += dt * (musicPlaying ? musicBPM : 112) / 60
+        // Carriers move before their riders, so riders stay glued to their heads.
+        for b in buddies.sorted(by: { $0.stackDepth < $1.stackDepth }) { b.tick(dt) }
         greetings()
+        tickGames(dt)
         tickSnow(dt)
 
         CATransaction.begin()
@@ -177,21 +223,110 @@ final class BuddyStage: NSView {
         }
     }
 
-    /// Two buddies walking into each other stop and wave.
+    /// Two buddies walking into each other on the same surface stop and high-five.
     private func greetings() {
         guard buddies.count > 1 else { return }
         for i in 0..<buddies.count {
             for j in (i + 1)..<buddies.count {
                 let a = buddies[i], b = buddies[j]
-                guard a.isWalkingWander, b.isWalkingWander, a.onGround, b.onGround else { continue }
+                guard a.isWalkingWander, b.isWalkingWander, a.onGround, b.onGround, a.platform == b.platform else { continue }
                 let dx = b.pos.x - a.pos.x
-                let approaching = a.walkDirection * dx > 0 && b.walkDirection * dx < 0
+                let approaching = a.facing * dx > 0 && b.facing * dx < 0
                 if approaching && abs(dx) < a.halfWidth * 2.2 {
-                    a.greet()
-                    b.greet()
+                    a.highFive(with: b, leads: true)
+                    b.highFive(with: a, leads: false)
                 }
             }
         }
+    }
+
+    // MARK: - Games
+
+    private func tickGames(_ dt: TimeInterval) {
+        // Tag: runs until time's up or players drop out (e.g. Claude gets busy).
+        if tagIt != nil {
+            gameClock += dt
+            let players = buddies.filter(\.isInTag)
+            if gameClock > 14 || players.count < 2 || tagIt?.isInTag != true {
+                players.forEach { $0.endGame() }
+                tagIt = nil
+            }
+        }
+        if congaLeader != nil {
+            gameClock += dt
+            let dancers = buddies.filter(\.isInConga)
+            if gameClock > 10 || dancers.count < 2 || congaLeader?.isInConga != true {
+                dancers.forEach { $0.endGame() }
+                congaLeader = nil
+            }
+        }
+        if let at = pendingConga, simTime >= at {
+            // Buddies may still be mid-celebration; keep trying for a few seconds.
+            if startConga() || congaRetries >= 6 {
+                pendingConga = nil
+            } else {
+                congaRetries += 1
+                pendingConga = simTime + 0.8
+            }
+        }
+        // Now and then, idle buddies start a game of tag on their own.
+        gameCooldown -= dt
+        if gameCooldown <= 0 {
+            gameCooldown = .random(in: 70...150)
+            if Double.random(in: 0...1) < 0.6 { startTag() }
+        }
+    }
+
+    @discardableResult
+    func startTag() -> Bool {
+        guard tagIt == nil, congaLeader == nil else { return false }
+        let players = buddies.filter(\.canJoinGame)
+        guard players.count >= 2 else { return false }
+        gameClock = 0
+        tagIt = players.randomElement()
+        players.forEach { $0.joinTag() }
+        return true
+    }
+
+    func tagged(_ buddy: Buddy) { tagIt = buddy }
+
+    @discardableResult
+    func startConga() -> Bool {
+        guard tagIt == nil, congaLeader == nil else { return false }
+        let players = buddies.filter(\.canJoinGame)
+        guard players.count >= 2 else { return false }
+        let leader = players.first(where: \.isMain) ?? players[0]
+        let followers = players.filter { $0 !== leader }.sorted { abs($0.pos.x - leader.pos.x) < abs($1.pos.x - leader.pos.x) }
+        gameClock = 0
+        congaLeader = leader
+        leader.joinConga(index: 0)
+        for (i, b) in followers.enumerated() { b.joinConga(index: i + 1) }
+        return true
+    }
+
+    /// When two or more sessions finish close together, everyone does a conga line.
+    private func noteFinish(_ session: String) {
+        let now = simTime
+        recentFinishes.removeAll { now - $0.at > 15 }
+        recentFinishes.append((session, now))
+        if Set(recentFinishes.map(\.session)).count >= 2 && buddies.count >= 2 {
+            recentFinishes.removeAll()
+            congaRetries = 0
+            pendingConga = now + 3.2  // After the celebrations.
+        }
+    }
+
+    /// Window ledges within reach that are wide enough to stand on.
+    func ledges(near x: CGFloat, reach: CGFloat, minWidth: CGFloat, excluding: Int) -> [(range: ClosedRange<CGFloat>, y: CGFloat)] {
+        guard windowsEnabled else { return [] }
+        var result: [(ClosedRange<CGFloat>, CGFloat)] = []
+        for (id, w) in windowPlatforms where id != excluding {
+            for seg in w.segments where seg.upperBound - seg.lowerBound >= minWidth {
+                let nearest = min(max(x, seg.lowerBound), seg.upperBound)
+                if abs(nearest - x) <= reach { result.append((seg, w.origin.y)) }
+            }
+        }
+        return result
     }
 
     // MARK: - Cursor

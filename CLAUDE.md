@@ -24,6 +24,9 @@ app from its menu, then delete `/Applications/ClaudeBuddy.app`.
 
 - Build: `swift build`. App bundle: `./scripts/build-app.sh [--install] [--universal] [--zip]`.
 - Preview art: `.build/debug/ClaudeBuddy --render-sprites /tmp/sprites.png`
+- Behavior tests: `swift build && .build/debug/ClaudeBuddy --self-test` (must print "All checks passed.";
+  it simulates on a fake clock, so it's fast and works even while the display is asleep). Run it after
+  touching `Buddy.swift` or `BuddyStage.swift`.
 - Fake an event: `echo '{"hook_event_name":"Stop","session_id":"x"}' | curl -s --data-binary @- http://127.0.0.1:47823/claude-buddy/event`
 - Test hook editing only on a scratch file: `ClaudeBuddy --install-hooks /path/to/copy.json`.
 - Keep CPU around 1%: don't move the window per frame, and don't reintroduce SpriteKit (see README "Performance").

@@ -2,9 +2,12 @@ import AppKit
 import QuartzCore
 
 /// One critter: a small state machine picking behaviors, a bit of physics, cursor reactions,
-/// and its own Core Animation layers. The `BuddyStage` owns and drives every buddy.
+/// games with the other buddies, and its own Core Animation layers. The `BuddyStage` owns
+/// and drives every buddy.
 ///
-/// `pos` is the point between the buddy's feet, in stage coordinates (origin bottom-left).
+/// `pos` is the point between the buddy's feet, in stage coordinates (the whole screen,
+/// origin bottom-left). A buddy stands on the floor (the Dock or the screen's bottom edge),
+/// on the top edge of an app window, or on another buddy's head.
 final class Buddy {
     unowned let stage: BuddyStage
     let isMain: Bool
@@ -15,6 +18,13 @@ final class Buddy {
     private(set) var isLeaving = false
     private(set) var isGone = false
 
+    /// What it's standing on: 0 = the floor, >0 = a window number, -1 = in the air (or riding).
+    private(set) var platform = 0
+    private var platformOrigin = CGPoint.zero
+    /// The buddy it's riding piggyback on, and the one riding it.
+    private(set) weak var carrier: Buddy?
+    fileprivate(set) weak var rider: Buddy?
+
     let root = CALayer()
     private let sprite = CALayer()
     private let bubble = CALayer()
@@ -24,12 +34,13 @@ final class Buddy {
     private var currentImage: CGImage?
 
     private enum Mode: Equatable {
-        case stand, sit, walk, sleep, wake, work(ToolKind), alert, hello, celebrate, pet, dizzy, held, tossed, arrive, chase
+        case stand, sit, walk, sleep, wake, work(ToolKind), alert, hello, celebrate, pet, dizzy
+        case held, tossed, arrive, chase, leap, dance, highFive, tag, conga, ride
 
         /// Reactions play to the end instead of being interrupted by Claude activity.
         var isReaction: Bool {
             switch self {
-            case .wake, .hello, .celebrate, .pet, .dizzy, .held, .tossed, .arrive: true
+            case .wake, .hello, .celebrate, .pet, .dizzy, .held, .tossed, .arrive, .leap, .highFive, .ride: true
             default: false
             }
         }
@@ -43,6 +54,13 @@ final class Buddy {
     /// Speeds and distances are tuned for pixel = 4 and scale with size.
     private var s: CGFloat { pixel / 4 }
     var halfWidth: CGFloat { 9 * pixel }
+    /// Height of the top of its head above its feet (where a rider sits) — lower when sitting.
+    var headHeight: CGFloat {
+        switch mode {
+        case .sit, .sleep, .ride: 7 * pixel
+        default: 9 * pixel
+        }
+    }
     private var gravity: CGFloat { 2200 * s }
     private var activity: Activity { info?.activity ?? .idle }
 
@@ -60,7 +78,7 @@ final class Buddy {
     private(set) var pos: CGPoint
     private var vel = CGVector.zero
     private(set) var onGround = true
-    private var facing: CGFloat = 1
+    private(set) var facing: CGFloat = 1
     private var squashTimer: TimeInterval = 0
     private var blinkTimer: TimeInterval = .random(in: 1...4)
     private var blinkLeft: TimeInterval = 0
@@ -72,6 +90,21 @@ final class Buddy {
     private var lastHammerFrame = 0
     private var flipTime: TimeInterval?
     private var greetCooldown: TimeInterval = 0
+    private var leapCooldown: TimeInterval = .random(in: 8...20)
+    private var lastBeat = -1
+    private var movedThisTick = false
+    private var lastTickX: CGFloat = 0
+
+    // Games
+    private enum PendingGame: Equatable { case tag, conga(Int) }
+    /// A game it's jumping down from a window to join.
+    private var pendingGame: PendingGame?
+    private var gameFreeze: TimeInterval = 0
+    private var congaIndex = 0
+    private weak var partner: Buddy?
+    private var highFiveLeads = false
+    /// Only a buddy you drop can land on another's head (not one hopping off or tumbling).
+    private var droppedByUser = false
 
     // Cursor
     private var cursorNear = false
@@ -116,10 +149,12 @@ final class Buddy {
         tag.cornerRadius = 4
         tag.isHidden = true
         applyScale()
+        lastTickX = x
 
         if dropIn {
-            pos.y = stage.bounds.height - 12 * pixel
+            pos.y = stage.bounds.height - 16 * pixel
             onGround = false
+            platform = -1
             enter(.arrive, duration: .infinity)
         } else {
             enter(.hello, duration: 1.6)
@@ -134,6 +169,8 @@ final class Buddy {
         tagText = nil
     }
 
+    // MARK: - What the stage asks about
+
     var hitRect: CGRect {
         CGRect(x: pos.x - halfWidth, y: pos.y, width: halfWidth * 2, height: 11 * pixel)
             .insetBy(dx: -6 * s, dy: -6 * s)
@@ -143,21 +180,44 @@ final class Buddy {
     var desiredFPS: Int {
         switch mode {
         case .sleep: 10
-        case .stand, .sit: onGround ? 15 : 30
+        case .stand, .sit: onGround && !stage.musicPlaying ? 15 : 30
         default: 30
         }
     }
 
+    var isHeld: Bool { mode == .held }
     var isWalkingWander: Bool { mode == .walk && (walkPurpose == .wander || walkPurpose == .pace) }
-    var walkDirection: CGFloat { facing }
+    var isInTag: Bool { mode == .tag || pendingGame == .tag }
+    var isInConga: Bool {
+        if mode == .conga { return true }
+        if case .conga = pendingGame { return true }
+        return false
+    }
+    var isOnWindow: Bool { platform > 0 || carrier?.isOnWindow == true }
+    /// How many buddies it's stacked on top of.
+    var stackDepth: Int { carrier.map { $0.stackDepth + 1 } ?? 0 }
+
+    /// Free to join a game with the others: idle and not busy with anything else.
+    /// (Buddies up on windows jump down to the floor to play.)
+    var canJoinGame: Bool {
+        guard activity == .idle, !isLeaving, carrier == nil, rider == nil else { return false }
+        if mode == .leap { return pendingGame == nil }  // Joins on landing.
+        guard onGround else { return false }
+        switch mode {
+        case .stand, .sit, .dance, .chase: return true
+        case .walk: return walkPurpose == .wander
+        default: return false
+        }
+    }
 
     var status: [String: Any] {
         var d: [String: Any] = [
             "main": isMain, "hat": hat.rawValue, "mode": "\(mode)", "x": Int(pos.x), "y": Int(pos.y),
-            "activity": "\(activity)", "leaving": isLeaving,
+            "activity": "\(activity)", "leaving": isLeaving, "platform": platform,
         ]
         if let sessionID { d["session"] = sessionID }
         if let p = info?.project { d["project"] = p }
+        if carrier != nil { d["riding"] = true }
         return d
     }
 
@@ -165,7 +225,7 @@ final class Buddy {
 
     func pulse(_ p: Pulse) {
         lastStimulus = Date()
-        guard !isLeaving, mode != .held, mode != .tossed, mode != .arrive else { return }
+        guard !isLeaving, mode != .held, mode != .tossed, mode != .arrive, mode != .leap else { return }
         switch p {
         case .finished:
             enter(.celebrate, duration: stage.reduceMotion ? 1.4 : 2.8)
@@ -192,10 +252,46 @@ final class Buddy {
         if mode != .held { enter(.hello, duration: 1.2) }
     }
 
-    func greet() {
+    /// Two buddies meeting: turn to each other and high-five.
+    func highFive(with other: Buddy, leads: Bool) {
         guard greetCooldown <= 0, !mode.isReaction, !isLeaving else { return }
         greetCooldown = 20
-        enter(.hello, duration: 1.3)
+        partner = other
+        highFiveLeads = leads
+        facing = other.pos.x >= pos.x ? 1 : -1
+        enter(.highFive, duration: 1.1)
+    }
+
+    func joinTag() {
+        if mode == .leap { pendingGame = .tag; return }
+        if platform != 0 { return jumpDownToPlay(.tag) }
+        gameFreeze = 0.6
+        enter(.tag, duration: .infinity)
+    }
+
+    private func jumpDownToPlay(_ game: PendingGame) {
+        pendingGame = game
+        leap(toX: clampX(pos.x + .random(in: -60...60) * s, floor: true), y: stage.groundY)
+    }
+
+    /// Just got tagged: now it's "it".
+    func gotTagged() {
+        gameFreeze = 0.7
+        hop(220)
+    }
+
+    func joinConga(index: Int) {
+        if mode == .leap { pendingGame = .conga(index); return }
+        if platform != 0 { return jumpDownToPlay(.conga(index)) }
+        congaIndex = index
+        enter(.conga, duration: .infinity)
+    }
+
+    /// The stage ends a game (tag or conga).
+    func endGame() {
+        pendingGame = nil
+        guard mode == .tag || mode == .conga else { return }
+        enter(.hello, duration: 1.0)
     }
 
     // MARK: - Frame
@@ -203,6 +299,8 @@ final class Buddy {
     func tick(_ dt: TimeInterval) {
         clock += dt
         greetCooldown -= dt
+        leapCooldown -= dt
+        lastTickX = pos.x
         if activity != lastActivity {
             activityChanged(from: lastActivity, to: activity)
             lastActivity = activity
@@ -212,6 +310,7 @@ final class Buddy {
         tickCursor(dt)
         tickMode(dt)
         tickPhysics(dt)
+        movedThisTick = abs(pos.x - lastTickX) > 0.3
         if isLeaving && (pos.x < -halfWidth * 2 || pos.x > stage.bounds.width + halfWidth * 2) { isGone = true }
     }
 
@@ -233,8 +332,12 @@ final class Buddy {
 
     private func chooseNext() {
         if isLeaving {
-            let offLeft = pos.x < stage.bounds.width / 2
-            walk(to: offLeft ? -halfWidth * 3 : stage.bounds.width + halfWidth * 3, speed: 95 * s, purpose: .leave)
+            if platform > 0 {
+                leap(toX: clampX(pos.x, floor: true), y: stage.groundY)
+            } else {
+                let offLeft = pos.x < stage.bounds.width / 2
+                walk(to: offLeft ? -halfWidth * 3 : stage.bounds.width + halfWidth * 3, speed: 95 * s, purpose: .leave)
+            }
             return
         }
         switch activity {
@@ -261,6 +364,13 @@ final class Buddy {
                 enter(.sleep, duration: .infinity)
                 return
             }
+            if stage.musicPlaying && stage.danceToMusic && Double.random(in: 0...1) < 0.55 {
+                enter(.dance, duration: .random(in: 6...12))
+                return
+            }
+            if leapCooldown <= 0 && Double.random(in: 0...1) < (platform > 0 ? 0.3 : 0.2) && tryLeap() {
+                return
+            }
             let r = Double.random(in: 0...1)
             if r < 0.5 {
                 walk(to: destination(around: pos.x, range: 420 * s, minDistance: 60 * s), speed: 34 * s, purpose: .wander)
@@ -272,12 +382,58 @@ final class Buddy {
         }
     }
 
+    /// Hop up onto a window, over to another, or back down to the floor.
+    private func tryLeap() -> Bool {
+        leapCooldown = .random(in: 10...25)
+        guard stage.windowsEnabled else { return false }
+        let ledges = stage.ledges(near: pos.x, reach: 520 * s, minWidth: halfWidth * 4, excluding: platform)
+        if platform > 0 && (ledges.isEmpty || Double.random(in: 0...1) < 0.6) {
+            leap(toX: clampX(pos.x + .random(in: -120...120) * s, floor: true), y: stage.groundY)
+            return true
+        }
+        guard let ledge = ledges.randomElement() else { return false }
+        let inset = halfWidth * 0.8
+        let lo = ledge.range.lowerBound + inset, hi = ledge.range.upperBound - inset
+        guard lo < hi else { return false }
+        leap(toX: min(max(pos.x + .random(in: -80...80) * s, lo), hi), y: ledge.y)
+        return true
+    }
+
+    private func leap(toX x: CGFloat, y: CGFloat) {
+        let dy = y - pos.y
+        let apex = max(dy, 0) + 36 * s
+        let vy = sqrt(2 * gravity * apex)
+        let tUp = vy / gravity
+        let tDown = sqrt(2 * max(apex - dy, 1) / gravity)
+        detachFromCarrier()
+        vel = CGVector(dx: (x - pos.x) / (tUp + tDown), dy: vy)
+        onGround = false
+        platform = -1
+        facing = x >= pos.x ? 1 : -1
+        enter(.leap, duration: .infinity)
+    }
+
+    /// Where it can walk: its window ledge, or the whole floor.
     private var walkBounds: ClosedRange<CGFloat> {
+        if platform > 0, let seg = currentSegment {
+            let lo = seg.lowerBound + halfWidth * 0.5, hi = seg.upperBound - halfWidth * 0.5
+            return lo <= hi ? lo...hi : pos.x...pos.x
+        }
+        return floorBounds
+    }
+
+    private var floorBounds: ClosedRange<CGFloat> {
         halfWidth...max(halfWidth, stage.bounds.width - halfWidth)
     }
 
-    private func clampX(_ x: CGFloat) -> CGFloat {
-        min(max(x, walkBounds.lowerBound), walkBounds.upperBound)
+    private var currentSegment: ClosedRange<CGFloat>? {
+        guard platform > 0, let w = stage.windowPlatforms[platform] else { return nil }
+        return w.segments.first { $0.contains(pos.x) }
+    }
+
+    private func clampX(_ x: CGFloat, floor: Bool = false) -> CGFloat {
+        let b = floor ? floorBounds : walkBounds
+        return min(max(x, b.lowerBound), b.upperBound)
     }
 
     /// Picks a destination at least `minDistance` away, within `range` of `center`.
@@ -336,10 +492,11 @@ final class Buddy {
     private func tickMode(_ dt: TimeInterval) {
         switch mode {
         case .walk:
-            let dx = targetX - pos.x
+            let target = walkPurpose == .leave ? targetX : clampX(targetX)
+            let dx = target - pos.x
             let step = walkSpeed * dt
             if abs(dx) <= step {
-                pos.x = targetX
+                pos.x = target
                 chooseNext()
             } else {
                 pos.x += dx > 0 ? step : -step
@@ -374,7 +531,23 @@ final class Buddy {
             if modeTime >= modeDuration { chooseNext() }
         case .chase:
             tickChase(dt)
-        case .held, .tossed, .arrive:
+        case .dance:
+            tickDance()
+        case .highFive:
+            if highFiveLeads && modeTime >= 0.3 && modeTime - dt < 0.3, let partner {
+                let mid = CGPoint(x: (pos.x + partner.pos.x) / 2, y: pos.y + 11 * pixel)
+                for dx in [-1.0, 0.0, 1.0] {
+                    stage.floatingEffect(BuddyArt.star, at: mid, dx: CGFloat(dx) * 16 * s, dy: 14 * s, duration: 0.45, scale: 0.7)
+                }
+            }
+            if modeTime >= modeDuration { chooseNext() }
+        case .tag:
+            tickTag(dt)
+        case .conga:
+            tickConga(dt)
+        case .ride:
+            if modeTime >= modeDuration { hopOffCarrier() }
+        case .held, .tossed, .arrive, .leap:
             break
         case .work(let kind):
             if kind == .build {
@@ -388,10 +561,117 @@ final class Buddy {
         }
     }
 
+    // MARK: - Music
+
+    private func tickDance() {
+        if !stage.musicPlaying && modeTime > 1 { chooseNext(); return }
+        let beat = Int(stage.beat)
+        if beat != lastBeat {
+            lastBeat = beat
+            switch beat % 8 {
+            case 4: facing = -facing
+            case 6: hop(200)
+            default: break
+            }
+            if beat % 8 == 7 && !stage.reduceMotion && beat % 16 == 15 { flipTime = 0; hop(360) }
+            if beat % (isMain ? 2 : 4) == 0 {
+                stage.floatingEffect(BuddyArt.notes.randomElement()!,
+                                     at: CGPoint(x: pos.x + .random(in: -6...6) * pixel, y: pos.y + 12 * pixel),
+                                     dx: .random(in: -20...20) * s, dy: 46 * s, duration: 1.4, scale: 0.8)
+            }
+        }
+        if modeTime >= modeDuration && onGround { chooseNext() }
+    }
+
+    // MARK: - Games
+
+    private func tickTag(_ dt: TimeInterval) {
+        if gameFreeze > 0 { gameFreeze -= dt; return }
+        let others = stage.buddies.filter { $0 !== self && $0.isInTag }
+        if stage.tagIt === self {
+            guard let target = others.min(by: { abs($0.pos.x - pos.x) < abs($1.pos.x - pos.x) }) else { return }
+            let dx = target.pos.x - pos.x
+            facing = dx >= 0 ? 1 : -1
+            pos.x = clampX(pos.x + facing * min(abs(dx), 150 * s * dt))
+            if abs(dx) < halfWidth * 1.3 && abs(target.pos.y - pos.y) < 30 * s {
+                stage.tagged(target)
+                target.gotTagged()
+                gameFreeze = 1.0
+                stage.floatingEffect(BuddyArt.star, at: CGPoint(x: (pos.x + target.pos.x) / 2, y: pos.y + 8 * pixel),
+                                     dx: 0, dy: 16 * s, duration: 0.5)
+            }
+        } else if let it = stage.tagIt {
+            let dx = pos.x - it.pos.x
+            guard abs(dx) < 280 * s else {
+                facing = dx >= 0 ? -1 : 1
+                return
+            }
+            let away: CGFloat = dx >= 0 ? 1 : -1
+            let b = walkBounds
+            let cornered = (away > 0 && pos.x >= b.upperBound - 4) || (away < 0 && pos.x <= b.lowerBound + 4)
+            if cornered && abs(dx) < halfWidth * 3.5 && onGround {
+                // Leap over whoever's "it".
+                facing = -away
+                vel.dx = -away * 280 * s
+                vel.dy = 560 * s
+                onGround = false
+                platform = -1
+            } else if onGround {
+                facing = away
+                pos.x = clampX(pos.x + away * 125 * s * dt)
+            }
+        }
+    }
+
+    private func tickConga(_ dt: TimeInterval) {
+        guard let leader = stage.congaLeader else { return }
+        let beat = Int(stage.beat)
+        if beat != lastBeat {
+            lastBeat = beat
+            if beat % 4 == 3 { hop(170) }
+            if congaIndex == 0 && beat % 2 == 0 {
+                stage.floatingEffect(BuddyArt.notes.randomElement()!, at: CGPoint(x: pos.x, y: pos.y + 12 * pixel),
+                                     dx: .random(in: -16...16) * s, dy: 44 * s, duration: 1.3, scale: 0.8)
+            }
+        }
+        if leader === self {
+            let b = walkBounds
+            if pos.x >= b.upperBound - 2 { facing = -1 }
+            if pos.x <= b.lowerBound + 2 { facing = 1 }
+            pos.x = clampX(pos.x + facing * 60 * s * dt)
+        } else {
+            let spacing = halfWidth * 2.3
+            let target = clampX(leader.pos.x - leader.facing * CGFloat(congaIndex) * spacing)
+            let dx = target - pos.x
+            if abs(dx) > 2 {
+                pos.x += (dx > 0 ? 1 : -1) * min(abs(dx), 150 * s * dt)
+                facing = abs(dx) > spacing * 0.5 ? (dx > 0 ? 1 : -1) : leader.facing
+            } else {
+                facing = leader.facing
+            }
+        }
+    }
+
+    // MARK: - Piggyback
+
+    private func detachFromCarrier() {
+        carrier?.rider = nil
+        carrier = nil
+    }
+
+    private func hopOffCarrier() {
+        let away: CGFloat = carrier.map { -$0.facing } ?? (Bool.random() ? 1 : -1)
+        detachFromCarrier()
+        enter(.tossed, duration: .infinity)
+        vel = CGVector(dx: away * 190 * s, dy: 330 * s)
+        onGround = false
+        platform = -1
+    }
+
     // MARK: - Cursor reactions
 
     private var canPlayWithCursor: Bool {
-        guard activity == .idle, !isLeaving else { return false }
+        guard activity == .idle, !isLeaving, carrier == nil else { return false }
         switch mode {
         case .stand, .sit: return true
         case .walk: return walkPurpose == .wander
@@ -400,9 +680,7 @@ final class Buddy {
     }
 
     private func tickCursor(_ dt: TimeInterval) {
-        guard stage.cursorReactions, !stage.optionHeld, let m = stage.mouse,
-              m.y >= 0, m.y <= stage.bounds.height, m.x >= 0, m.x <= stage.bounds.width
-        else {
+        guard stage.cursorReactions, !stage.optionHeld, let m = stage.mouse else {
             cursorNear = false
             cursorDist = .infinity
             lingerTime = 0
@@ -477,7 +755,7 @@ final class Buddy {
 
     private var eyesFollowCursor: Bool {
         switch mode {
-        case .stand, .sit, .walk, .work: true
+        case .stand, .sit, .walk, .work, .ride: true
         default: false
         }
     }
@@ -490,61 +768,150 @@ final class Buddy {
     // MARK: - Physics
 
     private func hop(_ speed: CGFloat) {
-        guard onGround else { return }
-        vel.dy = speed * s
+        guard onGround, carrier == nil else { return }
+        vel = CGVector(dx: 0, dy: speed * s)
         onGround = false
+        platform = -1
+    }
+
+    private func fallOff() {
+        onGround = false
+        platform = -1
+        vel = .zero
     }
 
     private func tickPhysics(_ dt: TimeInterval) {
-        let groundY = stage.groundY
         if mode == .held {
             onGround = false
+            platform = -1
             vel = .zero
             return
         }
-        // The floor rose (e.g. left a full-screen app): hop back up onto it.
-        if onGround && pos.y < groundY - 1 {
-            vel.dy = sqrt(2 * gravity * (groundY - pos.y + 14 * s))
-            onGround = false
-        }
-        // The floor dropped away: fall.
-        if onGround && pos.y > groundY + 1 { onGround = false }
-
-        if onGround {
-            pos.y = groundY
-        } else {
-            vel.dy -= gravity * dt
-            pos.y += vel.dy * dt
-            if mode == .tossed { pos.x += vel.dx * dt }
-            if vel.dy <= 0 && pos.y <= groundY {
-                let impact = -vel.dy
-                pos.y = groundY
-                vel.dy = 0
+        // Riding piggyback: stick to the carrier's head.
+        if let c = carrier {
+            if c.isGone || c.isHeld || c.isLeaving {
+                detachFromCarrier()
+                fallOff()
+            } else {
+                pos = CGPoint(x: c.pos.x, y: c.pos.y + c.headHeight)
+                facing = c.facing
                 onGround = true
-                landed(impact: impact)
+                return
             }
         }
 
-        guard !isLeaving else { return }
-        let bounds = walkBounds
-        if pos.x < bounds.lowerBound {
-            pos.x = bounds.lowerBound
-            if mode == .tossed { vel.dx = abs(vel.dx) * 0.6; facing = 1 }
-        } else if pos.x > bounds.upperBound {
-            pos.x = bounds.upperBound
-            if mode == .tossed { vel.dx = -abs(vel.dx) * 0.6; facing = -1 }
+        if onGround {
+            if platform == 0 {
+                let groundY = stage.groundY
+                if pos.y < groundY - 1 {
+                    // The floor rose (e.g. left a full-screen app): hop back up onto it.
+                    vel = CGVector(dx: 0, dy: sqrt(2 * gravity * (groundY - pos.y + 14 * s)))
+                    onGround = false
+                    platform = -1
+                } else if pos.y > groundY + 1 {
+                    fallOff()
+                } else {
+                    pos.y = groundY
+                }
+            } else if platform > 0, let w = stage.windowPlatforms[platform] {
+                // Ride along when the window moves.
+                pos.x += w.origin.x - platformOrigin.x
+                pos.y = w.origin.y
+                platformOrigin = w.origin
+                if !w.segments.contains(where: { $0.contains(pos.x) }) { fallOff() }
+            } else {
+                fallOff()  // The window closed, minimized, or got covered.
+            }
         }
+
+        if !onGround {
+            let prevY = pos.y
+            vel.dy -= gravity * dt
+            pos.y += vel.dy * dt
+            pos.x += vel.dx * dt
+            if vel.dy <= 0 { land(from: prevY) }
+        }
+
+        guard !isLeaving else { return }
+        let b = floorBounds
+        if pos.x < b.lowerBound {
+            pos.x = b.lowerBound
+            if !onGround { vel.dx = abs(vel.dx) * 0.6; facing = 1 }
+        } else if pos.x > b.upperBound {
+            pos.x = b.upperBound
+            if !onGround { vel.dx = -abs(vel.dx) * 0.6; facing = -1 }
+        }
+    }
+
+    /// Lands on the highest surface crossed this frame: the floor, a window ledge, or
+    /// (when dropped by the user) another buddy's head.
+    private func land(from prevY: CGFloat) {
+        var bestY = -CGFloat.infinity
+        var bestPlatform = -1
+        var bestCarrier: Buddy?
+
+        if pos.y <= stage.groundY {
+            bestY = stage.groundY
+            bestPlatform = 0
+        }
+        for (id, w) in stage.windowPlatforms where w.origin.y <= prevY + 0.5 && w.origin.y >= pos.y && w.origin.y > bestY {
+            if w.segments.contains(where: { $0.contains(pos.x) }) {
+                bestY = w.origin.y
+                bestPlatform = id
+            }
+        }
+        if mode == .tossed && droppedByUser && rider == nil {
+            for b in stage.buddies where b !== self && b.onGround && !b.isLeaving && !b.isHeld && b.rider == nil
+                && b.stackDepth < 2 && abs(b.pos.x - pos.x) < halfWidth * 0.9 {
+                let headY = b.pos.y + b.headHeight
+                if headY <= prevY + 0.5 && headY >= pos.y && headY > bestY {
+                    bestY = headY
+                    bestCarrier = b
+                }
+            }
+        }
+        guard bestY > -.infinity else { return }
+
+        let impact = -vel.dy
+        droppedByUser = false
+        pos.y = bestY
+        vel = .zero
+        onGround = true
+        if let c = bestCarrier {
+            platform = -1
+            carrier = c
+            c.rider = self
+            squashTimer = 0.14
+            enter(.ride, duration: .random(in: 8...14))
+            return
+        }
+        platform = bestPlatform
+        if platform > 0, let w = stage.windowPlatforms[platform] { platformOrigin = w.origin }
+        landed(impact: impact)
     }
 
     private func landed(impact: CGFloat) {
         if impact > 250 * s { squashTimer = 0.14 }
         switch mode {
         case .tossed:
-            vel.dx = 0
             if impact > 1200 * s { enter(.dizzy, duration: 1.8) } else { chooseNext() }
         case .arrive:
             poof()
             enter(.hello, duration: 1.6)
+        case .leap:
+            if let game = pendingGame, platform != 0 { return jumpDownToPlay(game) }
+            switch pendingGame {
+            case .tag?:
+                pendingGame = nil
+                gameFreeze = 0.3
+                enter(.tag, duration: .infinity)
+            case .conga(let i)?:
+                pendingGame = nil
+                congaIndex = i
+                enter(.conga, duration: .infinity)
+            case nil:
+                chooseNext()
+            }
         default:
             break
         }
@@ -565,6 +932,8 @@ final class Buddy {
             angle = sin(clock * 14) * 0.12
         } else if let t = flipTime {
             angle = -facing * 2 * .pi * min(t / 0.42, 1)
+        } else if mode == .dance && !stage.reduceMotion {
+            angle = sin(stage.beat * .pi) * 0.08
         }
         sprite.setAffineTransform(CGAffineTransform(rotationAngle: angle).scaledBy(x: facing, y: 1))
         root.position = CGPoint(x: pos.x.rounded(), y: pos.y.rounded())
@@ -572,23 +941,26 @@ final class Buddy {
         updateTag()
     }
 
+    private func walkingLegs(fps: Double) -> (Pose.Legs, Int) {
+        let i = Int(clock * fps) % 4
+        return ([.stepA, .stand, .stepB, .stand][i], i % 2)
+    }
+
     private func currentPose() -> Pose {
         var p = Pose()
         p.hat = hat
         p.look = lookDir
+        let beat = Int(stage.beat)
         switch mode {
         case .walk:
-            let fps: Double = walkSpeed > 90 * s ? 12 : 8
-            let i = Int(clock * fps) % 4
-            p.legs = [.stepA, .stand, .stepB, .stand][i]
-            p.bob = i % 2
+            (p.legs, p.bob) = walkingLegs(fps: walkSpeed > 90 * s ? 12 : 8)
             p.look = 1
             if walkPurpose == .flee {
                 p.eyes = .wide
                 p.arms = .up
             }
         case .stand:
-            break
+            if stage.musicPlaying { p.bob = beat % 2 }  // Bops along to the music.
         case .sit:
             p.legs = .tucked
         case .sleep:
@@ -637,20 +1009,50 @@ final class Buddy {
         case .dizzy:
             p.eyes = .dizzy
             p.look = 0
-        case .held, .tossed, .arrive:
+        case .held, .tossed, .arrive, .leap:
             p.arms = .up
             p.eyes = .wide
             p.look = 0
         case .chase:
             if chaseWalking {
-                let i = Int(clock * 10) % 4
-                p.legs = [.stepA, .stand, .stepB, .stand][i]
-                p.bob = i % 2
+                (p.legs, p.bob) = walkingLegs(fps: 10)
                 p.eyes = .wide
             } else {
                 p.eyes = .happy
                 p.arms = onGround ? .down : .up
             }
+            p.look = 1
+        case .dance:
+            let moves: [Pose.Arms] = [.up, .down, .waveHigh, .waveLow, .up, .down, .up, .waveHigh]
+            p.arms = moves[beat % moves.count]
+            p.eyes = .happy
+            p.bob = beat % 2
+            p.look = 0
+        case .highFive:
+            p.arms = modeTime < 0.55 ? .waveHigh : .down
+            p.eyes = .happy
+            p.look = 1
+        case .tag:
+            if movedThisTick { (p.legs, p.bob) = walkingLegs(fps: 12) }
+            if stage.tagIt === self {
+                p.arms = .holdOut
+                p.eyes = .wide
+                p.look = 1
+            } else {
+                p.arms = .up
+                p.eyes = gameFreeze > 0 ? .wide : .happy
+                p.look = -1
+            }
+        case .conga:
+            if movedThisTick { (p.legs, _) = walkingLegs(fps: 8) }
+            p.arms = congaIndex == 0 ? (beat % 2 == 0 ? .waveHigh : .up) : .holdOut
+            p.eyes = .happy
+            p.bob = beat % 2
+            p.look = 1
+        case .ride:
+            p.legs = .tucked
+            p.eyes = .happy
+            p.arms = Int(clock * 2) % 4 == 0 ? .up : .down
             p.look = 1
         }
         // Eyes follow a nearby cursor.
@@ -693,19 +1095,18 @@ final class Buddy {
         bubble.position = CGPoint(x: offset.x.rounded(), y: offset.y.rounded())
     }
 
-    /// The project name tag: shown on hover, or while waving for attention, when there's
-    /// more than one buddy to tell apart.
+    /// Name tag on hover: the session's project, or the song for a dancing main buddy.
     private func updateTag() {
-        let label = info?.project
-        let show = label != nil && stage.buddyCount > 1
-            && ((cursorDist < 120 * s && mode != .held) || mode == .alert)
+        var label = stage.buddyCount > 1 ? info?.project : nil
+        if isMain && mode == .dance, let track = stage.musicTrack { label = "♪ " + track }
+        let show = label != nil && ((cursorDist < 120 * s && mode != .held) || (mode == .alert && stage.buddyCount > 1))
         guard show, let label else {
             tag.isHidden = true
             return
         }
         if tagText != label {
             tagText = label
-            let text = label.count > 22 ? String(label.prefix(21)) + "…" : label
+            let text = label.count > 28 ? String(label.prefix(27)) + "…" : label
             let font = NSFont.monospacedSystemFont(ofSize: max(10, 11 * s), weight: .bold)
             let size = (text as NSString).size(withAttributes: [.font: font])
             tag.string = text
@@ -775,6 +1176,7 @@ final class Buddy {
             guard hypot(p.x - dragStart.x, p.y - dragStart.y) > 4 else { return }
             dragMoved = true
             lastStimulus = Date()
+            detachFromCarrier()
             enter(.held, duration: .infinity)
         }
         let dt = max(time - lastDragTime, 1.0 / 240)
@@ -782,17 +1184,19 @@ final class Buddy {
         dragVel = CGVector(dx: dragVel.dx * 0.5 + instant.dx * 0.5, dy: dragVel.dy * 0.5 + instant.dy * 0.5)
         lastDragPoint = p
         lastDragTime = time
-        pos.x = clampX(p.x + grabOffset.x)
+        pos.x = clampX(p.x + grabOffset.x, floor: true)
         pos.y = min(max(stage.groundY, p.y + grabOffset.y), stage.bounds.height - 12 * pixel)
         if abs(dragVel.dx) > 40 { facing = dragVel.dx > 0 ? 1 : -1 }
     }
 
     func release() {
         if dragMoved {
-            // Flick to throw.
+            // Flick to throw — or drop onto a window ledge or another buddy's head.
             let limit = 1600 * s
             vel = CGVector(dx: max(-limit, min(limit, dragVel.dx)), dy: max(-limit, min(1400 * s, dragVel.dy)))
             onGround = false
+            platform = -1
+            droppedByUser = true
             enter(.tossed, duration: .infinity)
         } else {
             lastStimulus = Date()

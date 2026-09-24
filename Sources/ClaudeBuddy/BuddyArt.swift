@@ -190,6 +190,17 @@ enum BuddyArt {
         "..W..",
     ], ["W": Palette.white]).cgImage()
 
+    /// Music notes in a few colors.
+    static let notes: [CGImage] = [Palette.signalB, Palette.star, Palette.heart].map { color in
+        PixelCanvas.from([
+            "..NNN",
+            "..N.N",
+            "..N.N",
+            "NNN..",
+            "NNN..",
+        ], ["N": color]).cgImage()
+    }
+
     static let confettiColors: [CGColor] = [
         Palette.body, Palette.star, Palette.signalB, Palette.heart, Palette.white, RGBA(hex: 0x7BD88F),
     ].map { CGColor(srgbRed: CGFloat($0.r) / 255, green: CGFloat($0.g) / 255, blue: CGFloat($0.b) / 255, alpha: 1) }

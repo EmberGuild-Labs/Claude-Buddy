@@ -31,6 +31,8 @@ final class OverlayController {
     let stage = BuddyStage(frame: NSRect(x: 0, y: 0, width: 480, height: 200))
     private let settings: Settings
     private var timer: Timer?
+    private var pollTick = 0
+    let music = MusicWatcher()
     private var lookTimer: Timer?
     private var observers: [NSObjectProtocol] = []
     private(set) var floorMode = "Above the Dock"
@@ -47,10 +49,20 @@ final class OverlayController {
         panel.contentView = stage
         setVisible(settings.visible)
 
-        timer = Timer.scheduledTimer(withTimeInterval: 0.75, repeats: true) { [weak self] _ in self?.updatePlacement() }
+        // Window positions refresh ~1×/s normally, and 20×/s while a buddy stands on or
+        // jumps between windows, so riding a dragged window stays smooth.
+        timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
+            // Nothing to do while the display sleeps (the buddies pause too).
+            guard let self, CGDisplayIsAsleep(CGMainDisplayID()) == 0 else { return }
+            self.pollTick += 1
+            self.stage.musicPlaying = self.music.isPlaying
+            self.stage.musicTrack = self.music.track
+            self.stage.musicBPM = self.music.bpm
+            if self.stage.needsFastWindowUpdates || self.pollTick % 16 == 0 { self.updatePlacement() }
+        }
         // Seasons change at midnight; checking hourly is plenty.
         lookTimer = Timer.scheduledTimer(withTimeInterval: 3600, repeats: true) { [weak self] _ in self?.applyLook() }
-        timer?.tolerance = 0.25
+        timer?.tolerance = 0.01
 
         let ws = NSWorkspace.shared.notificationCenter
         for name in [NSWorkspace.activeSpaceDidChangeNotification, NSWorkspace.didActivateApplicationNotification] {
@@ -84,6 +96,8 @@ final class OverlayController {
         stage.seasonalConfetti = season?.confetti
         stage.snowing = season?.snow ?? false
         stage.sessionBuddies = settings.sessionBuddies
+        stage.windowsEnabled = settings.climbWindows
+        stage.danceToMusic = settings.danceToMusic
         stage.cursorReactions = settings.cursorReactions
     }
 
@@ -101,49 +115,78 @@ final class OverlayController {
     func updatePlacement() {
         guard let screen = targetScreen() else { return }
         let dockHeight = max(0, screen.visibleFrame.minY - screen.frame.minY)
-        let covered = frontWindowCovers(screen)
-        floorMode = covered ? "Screen bottom (full-screen/maximized app)" : "Above the Dock"
+        let windows = scanWindows(on: screen)
+        floorMode = windows.frontCovers ? "Screen bottom (full-screen/maximized app)" : "Above the Dock"
 
-        // The window never moves while the buddy walks (moving windows is costly);
-        // it only changes when the screen, Dock, or size setting does.
-        let height = (dockHeight + CGFloat(BuddyArt.height) * settings.pixelScale + 110).rounded()
-        let frame = NSRect(x: screen.frame.minX, y: screen.frame.minY, width: screen.frame.width, height: height)
-        if panel.frame != frame { panel.setFrame(frame, display: true) }
-        stage.groundY = covered ? 0 : dockHeight
+        // The overlay covers the whole screen (so buddies can climb windows) but passes
+        // every click through. It never moves while buddies walk — moving windows is costly.
+        if panel.frame != screen.frame { panel.setFrame(screen.frame, display: true) }
+        stage.groundY = windows.frontCovers ? 0 : dockHeight
+        stage.windowPlatforms = settings.climbWindows ? windows.platforms : [:]
     }
 
     private var lastCovered = false
 
-    /// True when the frontmost app has a window filling the screen's usable area
-    /// (full-screen or maximized/zoomed).
-    private func frontWindowCovers(_ screen: NSScreen) -> Bool {
-        guard let app = NSWorkspace.shared.frontmostApplication else { return false }
-        // While our own alerts/menus are up, keep whatever we had.
-        if app.processIdentifier == ProcessInfo.processInfo.processIdentifier { return lastCovered }
+    private struct WindowScan {
+        var frontCovers = false
+        var platforms: [Int: WindowPlatform] = [:]
+    }
+
+    /// One pass over the on-screen windows (front to back) that finds:
+    /// - whether the frontmost app fills the screen (full-screen or maximized), and
+    /// - every normal window's top edge, minus the parts hidden behind windows in front of it.
+    /// Reading window bounds needs no special permission.
+    private func scanWindows(on screen: NSScreen) -> WindowScan {
+        var scan = WindowScan()
+        let ourPID = ProcessInfo.processInfo.processIdentifier
+        let frontPID = NSWorkspace.shared.frontmostApplication?.processIdentifier
         guard let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]],
               let primaryTop = NSScreen.screens.first?.frame.maxY
-        else { return false }
+        else { return scan }
 
         let visible = screen.visibleFrame
-        let tolerance: CGFloat = 30
-        var covered = false
+        let buddyRoom = CGFloat(BuddyArt.height) * settings.pixelScale * 0.6
+        var inFront: [NSRect] = []
         for info in list {
-            guard (info[kCGWindowOwnerPID as String] as? pid_t) == app.processIdentifier,
-                  (info[kCGWindowLayer as String] as? Int) == 0,
+            guard (info[kCGWindowLayer as String] as? Int) == 0,
+                  let pid = info[kCGWindowOwnerPID as String] as? pid_t, pid != ourPID,
+                  (info[kCGWindowAlpha as String] as? Double ?? 1) > 0.1,
+                  let number = info[kCGWindowNumber as String] as? Int,
                   let boundsDict = info[kCGWindowBounds as String] as? NSDictionary,
                   let cg = CGRect(dictionaryRepresentation: boundsDict)
             else { continue }
             // CoreGraphics uses a top-left origin on the primary display.
             let rect = NSRect(x: cg.minX, y: primaryTop - cg.maxY, width: cg.width, height: cg.height)
-            guard rect.intersects(screen.frame) else { continue }
-            if rect.width >= visible.width - tolerance,
-               rect.height >= visible.height * 0.85,
-               rect.minY <= visible.minY + tolerance {
-                covered = true
-                break
+            guard rect.intersects(screen.frame), rect.width >= 60, rect.height >= 40 else { continue }
+            defer { inFront.append(rect) }
+
+            if pid == frontPID, rect.width >= visible.width - 30, rect.height >= visible.height * 0.85,
+               rect.minY <= visible.minY + 30 {
+                scan.frontCovers = true
+            }
+
+            // A ledge needs headroom below the menu bar and enough width to stand on.
+            let top = rect.maxY
+            guard rect.width >= 150, top + buddyRoom <= visible.maxY, top > visible.minY + 40 else { continue }
+            var segments = [rect.minX...rect.maxX]
+            for front in inFront where front.minY <= top + 2 && front.maxY >= top - 2 {
+                segments = segments.flatMap { seg -> [ClosedRange<CGFloat>] in
+                    var parts: [ClosedRange<CGFloat>] = []
+                    if front.minX > seg.lowerBound { parts.append(seg.lowerBound...min(seg.upperBound, front.minX)) }
+                    if front.maxX < seg.upperBound { parts.append(max(seg.lowerBound, front.maxX)...seg.upperBound) }
+                    return front.maxX <= seg.lowerBound || front.minX >= seg.upperBound ? [seg] : parts
+                }
+            }
+            // Stage coordinates are relative to the screen's bottom-left corner.
+            let ox = screen.frame.minX, oy = screen.frame.minY
+            let local = segments.filter { $0.upperBound - $0.lowerBound >= 40 }
+                .map { ($0.lowerBound - ox)...($0.upperBound - ox) }
+            if !local.isEmpty {
+                scan.platforms[number] = WindowPlatform(origin: CGPoint(x: rect.minX - ox, y: top - oy), segments: local)
             }
         }
-        lastCovered = covered
-        return covered
+        if frontPID == ourPID { scan.frontCovers = lastCovered }
+        lastCovered = scan.frontCovers
+        return scan
     }
 }

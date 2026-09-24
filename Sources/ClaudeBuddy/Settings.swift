@@ -44,6 +44,18 @@ final class Settings {
         set { defaults.set(newValue, forKey: "cursorReactions") }
     }
 
+    /// Buddies hop onto the tops of app windows.
+    var climbWindows: Bool {
+        get { defaults.object(forKey: "climbWindows") as? Bool ?? true }
+        set { defaults.set(newValue, forKey: "climbWindows") }
+    }
+
+    /// Dance when Spotify or Apple Music is playing.
+    var danceToMusic: Bool {
+        get { defaults.object(forKey: "danceToMusic") as? Bool ?? true }
+        set { defaults.set(newValue, forKey: "danceToMusic") }
+    }
+
     /// The main buddy's hat: nil = seasonal (automatic).
     var mainHat: Hat? {
         get { defaults.string(forKey: "mainHat").flatMap(Hat.init(rawValue:)) }

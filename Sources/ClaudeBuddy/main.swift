@@ -34,6 +34,9 @@ func argument(after flag: String) -> String? {
     return args[i + 1]
 }
 
+if args.contains("--self-test") {
+    exit(SelfTest.run())
+}
 if let file = argument(after: "--render-sprites") {
     SpriteSheet.write(to: URL(fileURLWithPath: file))
     exit(0)

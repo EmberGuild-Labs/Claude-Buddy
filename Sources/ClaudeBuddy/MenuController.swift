@@ -32,6 +32,7 @@ final class MenuController: NSObject, NSMenuDelegate {
         let hooksInstalled = HookInstaller.isInstalled()
         menu.addItem(info(hooksInstalled ? "Hooks: installed ✓" : "Hooks: not installed"))
         menu.addItem(info("Floor: \(overlay.floorMode)"))
+        if overlay.music.isPlaying { menu.addItem(info("♪ " + (overlay.music.track ?? "Music playing"))) }
         menu.addItem(info(server.status))
         menu.addItem(.separator())
 
@@ -60,6 +61,8 @@ final class MenuController: NSObject, NSMenuDelegate {
         menu.addItem(submenu("Hat", hatMenu))
         menu.addItem(item("Extra Buddy per Session", #selector(toggleSessionBuddies), on: settings.sessionBuddies))
         menu.addItem(item("Cursor Reactions", #selector(toggleCursor), on: settings.cursorReactions))
+        menu.addItem(item("Climb onto Windows", #selector(toggleClimb), on: settings.climbWindows))
+        menu.addItem(item("Dance to Music", #selector(toggleDance), on: settings.danceToMusic))
 
         let screenMenu = NSMenu()
         screenMenu.addItem(item("Main Display", #selector(setScreenMain), on: !settings.followMouse))
@@ -140,6 +143,17 @@ final class MenuController: NSObject, NSMenuDelegate {
         overlay.applySettings()
     }
 
+    @objc private func toggleClimb() {
+        settings.climbWindows.toggle()
+        overlay.applySettings()
+        overlay.updatePlacement()
+    }
+
+    @objc private func toggleDance() {
+        settings.danceToMusic.toggle()
+        overlay.applySettings()
+    }
+
     @objc private func setScreenMain() {
         settings.followMouse = false
         overlay.updatePlacement()
@@ -162,12 +176,20 @@ final class MenuController: NSObject, NSMenuDelegate {
         ("Tool Failed", ["hook_event_name": "PostToolUse", "tool_name": "Bash", "tool_response": ["is_error": true]]),
         ("Add a Session Buddy", ["hook_event_name": "SessionStart", "cwd": "/demo/side-project"]),
         ("Fall Asleep", nil),
+        ("Dance Party (pretend music)", nil),
+        ("Game of Tag", nil),
+        ("Conga Line", nil),
     ]
     private var demoSessionCount = 0
 
     @objc private func demo(_ sender: NSMenuItem) {
         guard let event = Self.demos[sender.tag].event else {
-            overlay.stage.forceSleep()
+            switch Self.demos[sender.tag].title {
+            case "Game of Tag": withPlaymates { $0.startTag() }
+            case "Conga Line": withPlaymates { $0.startConga() }
+            case "Dance Party (pretend music)": overlay.music.simulate(seconds: 25)
+            default: overlay.stage.forceSleep()
+            }
             return
         }
         var e = event
@@ -194,6 +216,24 @@ final class MenuController: NSObject, NSMenuDelegate {
         demoEnd?.invalidate()
         demoEnd = Timer.scheduledTimer(withTimeInterval: 15, repeats: false) { [weak self] _ in
             self?.activity.handle(["hook_event_name": "SessionEnd", "session_id": "demo"])
+        }
+    }
+
+    /// Games need at least two idle buddies; bring in a couple of pretend sessions if needed.
+    private func withPlaymates(_ start: @escaping (BuddyStage) -> Bool) {
+        if start(overlay.stage) { return }
+        for _ in 0..<2 {
+            demoSessionCount += 1
+            let sid = "demo-extra-\(demoSessionCount)"
+            activity.handle(["hook_event_name": "SessionStart", "session_id": sid, "cwd": "/demo/playmate-\(demoSessionCount)"])
+            Timer.scheduledTimer(withTimeInterval: 40, repeats: false) { [weak self] _ in
+                self?.activity.handle(["hook_event_name": "SessionEnd", "session_id": sid])
+            }
+        }
+        // Let them drop in and land first.
+        Timer.scheduledTimer(withTimeInterval: 3.5, repeats: false) { [weak self] _ in
+            guard let self else { return }
+            _ = start(self.overlay.stage)
         }
     }
 
