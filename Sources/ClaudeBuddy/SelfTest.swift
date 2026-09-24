@@ -282,6 +282,8 @@ enum SelfTest {
                 && edit?.items.contains { $0.keyEquivalent == "c" } == true
                 && edit?.items.contains { $0.keyEquivalent == "a" } == true)
 
+        failures += ExtrasSelfTest.run()
+
         print(failures == 0 ? "All checks passed." : "\(failures) check(s) failed.")
         return failures == 0 ? 0 : 1
     }

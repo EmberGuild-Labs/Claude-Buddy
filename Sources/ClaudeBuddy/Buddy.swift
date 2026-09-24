@@ -38,8 +38,15 @@ final class Buddy {
     private(set) var boardTargetX: CGFloat?
 
     /// Poses a director can put the buddy in while it's scripted.
-    enum ScriptPose: Equatable { case stand, walk, jump, sleep, stretch(progress: Double), hidden }
+    enum ScriptPose: Equatable { case stand, walk, jump, sleep, stretch(progress: Double), hidden, custom(Pose) }
     private var scriptPose = ScriptPose.stand
+    /// Extras: a director's own art for the whole sprite, and a rotation (radians, forward-positive).
+    var scriptImage: CGImage?
+    var scriptAngle: CGFloat = 0
+    /// Extras: summoned for an activity; not tied to a Claude Code session.
+    var isGuest = false
+    /// Extras: pack accessories it wears all the time.
+    var accessories: [String] = []
     private var tagText: String?
     private var currentImage: CGImage?
 
@@ -336,6 +343,8 @@ final class Buddy {
         detachFromCarrier()
         vel = .zero
         scriptPose = .stand
+        scriptImage = nil
+        scriptAngle = 0
         enter(.scripted, duration: .infinity)
     }
 
@@ -345,14 +354,27 @@ final class Buddy {
         scriptPose = pose
     }
 
-    func endScript() {
+    func endScript(greet: Bool = true) {
         guard mode == .scripted else { return }
         scriptPose = .stand
+        scriptImage = nil
+        scriptAngle = 0
         pos.y = stage.groundY
         platform = 0
         onGround = true
         lastStimulus = Date()
-        enter(.hello, duration: 1.2)
+        if greet { enter(.hello, duration: 1.2) } else { chooseNext() }
+    }
+
+    /// Extras: settled somewhere a director can take over (not mid-air, being carried, or riding).
+    var isSettled: Bool {
+        onGround && carrier == nil && mode != .held && mode != .tossed && mode != .arrive && mode != .leap
+    }
+
+    /// Extras: hop down from a window ledge to the floor, ready to be cast in an activity.
+    func comeDownToFloor() {
+        guard mode != .scripted, onGround, carrier == nil, platform != 0 else { return }
+        leap(toX: clampX(pos.x, floor: true), y: stage.groundY)
     }
 
     /// Go to `x` on the floor and hold the Today billboard overhead.
@@ -1048,7 +1070,7 @@ final class Buddy {
     // MARK: - Rendering
 
     func render() {
-        let image = BuddyArt.image(currentPose())
+        let image = (mode == .scripted ? scriptImage : nil) ?? BuddyArt.image(currentPose())
         if image !== currentImage {
             sprite.contents = image
             currentImage = image
@@ -1062,6 +1084,8 @@ final class Buddy {
             angle = -facing * 2 * .pi * min(t / 0.42, 1)
         } else if mode == .dance && !stage.reduceMotion {
             angle = sin(stage.beat * .pi) * 0.08
+        } else if mode == .scripted && !stage.reduceMotion {
+            angle = -facing * scriptAngle
         }
         sprite.setAffineTransform(CGAffineTransform(rotationAngle: angle).scaledBy(x: facing, y: 1))
         root.position = CGPoint(x: pos.x.rounded(), y: pos.y.rounded())
@@ -1100,6 +1124,7 @@ final class Buddy {
     private func currentPose() -> Pose {
         var p = Pose()
         p.hat = hat
+        p.accessories = accessories
         p.look = lookDir
         let beat = Int(stage.beat)
         switch mode {
@@ -1171,6 +1196,8 @@ final class Buddy {
             case .stretch(let progress):
                 p.arms = progress < 0.75 ? .up : .down
                 p.eyes = progress < 0.4 ? .closed : .happy
+            case .custom(let custom):
+                p = custom
             }
         case .sign:
             p.arms = .up  // Holding the sign overhead.

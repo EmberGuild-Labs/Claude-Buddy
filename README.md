@@ -65,6 +65,22 @@ A tiny pixel-art Claude critter that lives along the bottom of your Mac's screen
   | New Year's, and its "birthday" (the day you installed it) | Party hat |
 
   You can also pick any hat for it from the menu.
+- **Extras: tricks, accessories, and your own routines.** Press **⌃⌥B** (the *leader key*), then a key or two:
+
+  | After ⌃⌥B | Buddy |
+  |---|---|
+  | `↑ ↑ ↓ ↓` | Backflip |
+  | `T` | **Goes camping.** A tent rises out of the floor. The buddy ducks inside (the tent rattles) and comes out pulling a wagon of firewood. It lights a campfire and toasts marshmallows until you ⌥-click it or press `⌃⌥B T` again. Then it pushes the wagon off-screen. |
+  | `F` | **Goes fishing.** A pond appears. It casts a rod and waits for a bite, then reels in a fish (or a boot). |
+  | `S` | **Seesaw** with another buddy. If it's alone, a guest buddy drops in to play and walks off afterwards. |
+  | `H` | **Secret handshake.** Only works when another buddy is around. |
+  | `P` | **Take the controls.** ← → walk, ↑ jumps, `F` backflips, `C` cartwheels, `Esc` hands it back. |
+  | `B` `W` `C` `M` `D` `R` `X` | Bow, wave, cartwheel, moonwalk, robot dance, roll around, stretch break |
+  | `Esc` | Stop whatever it's doing |
+
+  - **Everything's in the menu.** Everything is also listed under **Extras → Tricks & Activities**. **Extras → Accessories** has a wizard hat, chef hat, headphones, sunglasses, a bow tie, a hero cape, and more.
+  - **Make your own.** A **pack** is a JSON file that adds pixel-art accessories, animations, and scripted activities with props, speech bubbles, several buddies, and puppet controls. Packs can also add keyboard shortcuts and **triggers**: "at 14:30", "every 45 minutes on weekdays", "when I open Xcode", "when Claude finishes". Start with **Extras → Packs → Open Packs Folder**. The guide is [docs/PACKS.md](docs/PACKS.md), and [docs/example-pack.json](docs/example-pack.json) shows every feature.
+  - **No special permissions.** The leader key only grabs the keys it needs, and only for 2.5 seconds after you press it.
 - **Light on resources.** Uses about 1% CPU. See "Performance" below.
 - Respects **Reduce Motion** (no flips or wobble, fewer hops).
 
@@ -149,6 +165,7 @@ Menu-bar menu:
 | Climb onto Windows | Let buddies hop onto app windows |
 | Dance to Music | Dance when Spotify or Apple Music is playing |
 | Display | Walk on the main display, or follow the mouse between displays |
+| Extras | Tricks & Activities (run or stop one), Accessories, Leader Key (⌃⌥B default, ⌥⌘B, ⌃⌥G, ⌃⌥/, or Off), Shortcuts (what's bound), Schedules & Triggers, and Packs (turn packs on or off, open the folder, reload, see problems) |
 | Try an Animation | Preview reactions without Claude Code. **Every buddy** acts out the demo together (thinking, typing, waving for permission, celebrating, dancing…). Also includes "Game of Tag", "Conga Line" (both bring in pretend playmates if needed), and "Add a Session Buddy" (a pretend 30 s session) |
 | Dismiss Extra Buddies | Sends every extra buddy off-screen and keeps the main one. Pretend demo sessions end. Real sessions keep running without a buddy (their events go to the main buddy) until you start a new session |
 | Install / Remove Claude Code Hooks | Add or remove the hooks in `~/.claude/settings.json` |
@@ -234,6 +251,12 @@ Debugging: `curl http://127.0.0.1:47823/claude-buddy/status` returns a JSON snap
 - **The billboard is drawn in pixels, not as a window:** it lives on the buddies' overlay, so they can hold it. The font and icons are hand-made pixel art in code, so there are no font files or licenses. The overlay normally passes every click through; it only accepts clicks while the pointer is directly over the billboard. Canvas Settings stays a normal Mac window, because typing a token needs real text fields.
 - **Reminder rules** live in `ReminderPlanner`, a pure function the self-test checks. Each reminder fires once, tracked by key: only the latest applicable warning fires (24 h, 3 h, or 1 h), submitted or checked-off work is skipped, and at most 3 signs appear per check.
 - **No secrets in git:** a pre-commit hook (`.githooks/pre-commit`) blocks commits containing anything that looks like a Canvas token, GitHub/Anthropic/OpenAI/AWS key, bearer token, or private key. `.gitignore` also excludes `.env` and key files. Turn it on in your clone with `git config core.hooksPath .githooks`.
+- **Extras are data, performed by a director.**
+  - **Additive by design.** Activities are JSON steps performed by `ActivityDirector`, which takes buddies over through the same `beginScript`/`script`/`endScript` hooks the nap uses. The existing behaviors (nap, billboard, games, hats) are untouched, and the nap and billboard always win over an activity.
+  - **Why JSON packs.** Anyone can add routines without rebuilding, a pack problem is reported by name instead of crashing, and the built-in routines prove the format can express nap-scale interactions: props rising from the floor, hiding inside them, pulling and pushing props, riding them, waiting for a click.
+  - **Keys without permissions.** Carbon hot keys need no Accessibility or Input Monitoring permission. So the leader key grabs bare keys (arrows, letters) only for a moment, and puppet mode only while it runs, with Esc and an idle timeout. The trade-off: a grabbed key doesn't reach other apps meanwhile.
+  - **Triggers.** They use `NSWorkspace` app notifications and a 15-second clock check, and wait (up to 2 minutes) if the buddy is busy or hidden.
+  - **Tests.** `--self-test` runs every built-in activity to the end on a fake clock.
 - **Cursor reactions without special permissions:** the frame loop just reads the cursor position. A "fast swipe" is detected along the cursor's path between frames, so it still works at the 15 fps idle rate. Only the closest buddy comes over to play, and there are cooldowns so it doesn't get clingy.
 
 ## Development
@@ -248,6 +271,28 @@ echo '{"hook_event_name":"Stop","session_id":"x"}' | \
 
 The single-instance check and Launch at Login only work from the bundled `.app`.
 
+Extras (packs) tools:
+
+```bash
+.build/debug/ClaudeBuddy --check-packs                     # what loaded from the packs folder, and any problems
+.build/debug/ClaudeBuddy --render-extras out.png           # every accessory, prop, and clip frame
+.build/debug/ClaudeBuddy --film camping out.png            # contact sheet of an activity, frame by frame
+curl -X POST -d '{"run": "backflip"}' http://127.0.0.1:47823/claude-buddy/do
+curl -X POST http://127.0.0.1:47823/claude-buddy/extras/reload
+```
+
+The Extras code lives in `Sources/ClaudeBuddy/Extras/`:
+
+| File | What it holds |
+|---|---|
+| `PackModel.swift` | The pack format and its parser |
+| `ExtrasCatalog.swift` | Merging packs, checking references, and drawing accessories |
+| `ActivityDirector.swift` | The script engine: casting, steps, props, puppet mode, and speech bubbles |
+| `Keys.swift` | Shortcuts, the leader key, and sequences |
+| `TriggerEngine.swift` | Triggers |
+| `ExtrasController.swift` | The menu, HTTP, and wiring |
+| `BuiltInPack.swift` | The shipped content |
+
 Making a release (a universal Apple Silicon + Intel build, zipped):
 
 ```bash
@@ -258,7 +303,8 @@ gh release create v1.x.y build/ClaudeBuddy.zip
 
 ## Ideas for later
 
-- Speech bubbles showing the tool name or a snippet of Claude's message
+- Speech bubbles showing the tool name or a snippet of Claude's message (the Extras `say` bubble could do this)
+- Live-reload packs when a file in the packs folder changes
 - Optional sound effects
 - A menu-bar icon that shows Claude's status
 - Auto-hide while screen sharing

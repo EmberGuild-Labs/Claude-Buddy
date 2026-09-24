@@ -15,6 +15,8 @@ final class EventServer {
     var onEvent: (([String: Any]) -> Void)?
     /// Called on the main thread.
     var statusProvider: (() -> [String: Any])?
+    /// Extras routes (`/claude-buddy/do` and friends). Called on the main thread; nil = not found.
+    var extraHandler: ((_ method: String, _ path: String, _ body: Data) -> (status: Int, body: String)?)?
     private(set) var status = "Starting…"
 
     private var listener: NWListener?
@@ -106,7 +108,14 @@ final class EventServer {
         case ("GET", Self.pingPath):
             reply = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 15\r\nConnection: close\r\n\r\nclaude-buddy ok"
         default:
-            reply = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+            if let r = DispatchQueue.main.sync(execute: { self.extraHandler?(request.method, request.path, request.body) }) {
+                let code = r.status, text = r.body
+                let body = Data(text.utf8)
+                let reason = [200: "OK", 400: "Bad Request", 404: "Not Found", 409: "Conflict"][code] ?? "OK"
+                reply = "HTTP/1.1 \(code) \(reason)\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: \(body.count)\r\nConnection: close\r\n\r\n" + text
+            } else {
+                reply = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+            }
         }
         connection.send(content: Data(reply.utf8), completion: .contentProcessed { _ in connection.cancel() })
     }
