@@ -30,26 +30,29 @@ final class Buddy {
     private let bubble = CALayer()
     private let orbit = CALayer()
     private let tag = CATextLayer()
-    /// A little board it holds up for reminders ("Essay — due in 45 min").
-    private let signBoard = CATextLayer()
+    /// A little pixel placard it holds up for reminders ("Essay — due in 45 min").
+    private let signBoard = CALayer()
+    private var signText: String?
     private(set) var signReminder: Reminder?
+    /// Where it should stand to hold up the Today billboard (nil = not on billboard duty).
+    private(set) var boardTargetX: CGFloat?
     private var tagText: String?
     private var currentImage: CGImage?
 
     private enum Mode: Equatable {
         case stand, sit, walk, sleep, wake, work(ToolKind), alert, hello, celebrate, pet, dizzy
-        case held, tossed, arrive, chase, leap, dance, highFive, tag, conga, ride, cheer, sign
+        case held, tossed, arrive, chase, leap, dance, highFive, tag, conga, ride, cheer, sign, holdBoard
 
         /// Reactions play to the end instead of being interrupted by Claude activity.
         var isReaction: Bool {
             switch self {
-            case .wake, .hello, .celebrate, .pet, .dizzy, .held, .tossed, .arrive, .leap, .highFive, .ride, .cheer, .sign: true
+            case .wake, .hello, .celebrate, .pet, .dizzy, .held, .tossed, .arrive, .leap, .highFive, .ride, .cheer, .sign, .holdBoard: true
             default: false
             }
         }
     }
 
-    private enum WalkPurpose { case wander, pace, flee, leave }
+    private enum WalkPurpose { case wander, pace, flee, leave, toBoard }
 
     private let sleepAfter: TimeInterval = 5 * 60
 
@@ -141,12 +144,7 @@ final class Buddy {
         for l in [root, sprite, bubble, orbit, tag, signBoard] { l.actions = BuddyStage.noActions }
         root.addSublayer(signBoard)
         signBoard.anchorPoint = CGPoint(x: 0.5, y: 0)
-        signBoard.alignmentMode = .center
-        signBoard.isWrapped = true
-        signBoard.foregroundColor = CGColor(srgbRed: 0.17, green: 0.11, blue: 0.09, alpha: 1)
-        signBoard.backgroundColor = CGColor(srgbRed: 1, green: 0.99, blue: 0.96, alpha: 1)
-        signBoard.borderColor = CGColor(srgbRed: 0.17, green: 0.11, blue: 0.09, alpha: 1)
-        signBoard.cornerRadius = 3
+        signBoard.magnificationFilter = .nearest
         signBoard.zPosition = 5
         signBoard.isHidden = true
         root.addSublayer(sprite)
@@ -204,6 +202,7 @@ final class Buddy {
     }
 
     var isHeld: Bool { mode == .held }
+    var isHoldingBoard: Bool { mode == .holdBoard }
     var isWalkingWander: Bool { mode == .walk && (walkPurpose == .wander || walkPurpose == .pace) }
     var isInTag: Bool { mode == .tag || pendingGame == .tag }
     var isInConga: Bool {
@@ -218,7 +217,7 @@ final class Buddy {
     /// Free to join a game with the others: idle and not busy with anything else.
     /// (Buddies up on windows jump down to the floor to play.)
     var canJoinGame: Bool {
-        guard activity == .idle, !isLeaving, carrier == nil, rider == nil else { return false }
+        guard activity == .idle, !isLeaving, carrier == nil, rider == nil, boardTargetX == nil else { return false }
         if mode == .leap { return pendingGame == nil }  // Joins on landing.
         guard onGround else { return false }
         switch mode {
@@ -308,7 +307,7 @@ final class Buddy {
 
     /// Can it hold up a reminder sign right now? (Not while flying, riding, or mid-game.)
     var canHoldSign: Bool {
-        guard !isLeaving, onGround, carrier == nil, rider == nil else { return false }
+        guard !isLeaving, onGround, carrier == nil, rider == nil, boardTargetX == nil else { return false }
         switch mode {
         case .held, .tossed, .arrive, .leap, .ride, .celebrate, .tag, .conga, .sign, .highFive: return false
         default: return true
@@ -319,6 +318,23 @@ final class Buddy {
         signReminder = reminder
         facing = stage.mouse.map { $0.x >= pos.x ? 1 : -1 } ?? facing
         enter(.sign, duration: reminder.urgent ? 10 : 8)
+    }
+
+    /// Go to `x` on the floor and hold the Today billboard overhead.
+    func goHoldBoard(at x: CGFloat) {
+        boardTargetX = x
+        detachFromCarrier()
+        switch mode {
+        case .held, .tossed, .leap, .arrive: break  // They call chooseNext when they land.
+        default: chooseNext()
+        }
+    }
+
+    /// The billboard closed: back to normal life with a little wave.
+    func releaseBoard() {
+        guard boardTargetX != nil else { return }
+        boardTargetX = nil
+        if mode == .holdBoard { enter(.hello, duration: 0.8) } else if mode == .walk && walkPurpose == .toBoard { chooseNext() }
     }
 
     /// Menu demo: dance right away.
@@ -378,6 +394,18 @@ final class Buddy {
     // MARK: - Behavior
 
     private func chooseNext() {
+        if let x = boardTargetX, !isLeaving {
+            if platform != 0 || !onGround {
+                if onGround { leap(toX: x, y: stage.groundY) }
+            } else if abs(pos.x - x) < 2 {
+                pos.x = x
+                facing = 1
+                enter(.holdBoard, duration: .infinity)
+            } else {
+                walk(to: x, speed: 170 * s, purpose: .toBoard)
+            }
+            return
+        }
         if isLeaving {
             if platform > 0 {
                 leap(toX: clampX(pos.x, floor: true), y: stage.groundY)
@@ -1011,19 +1039,13 @@ final class Buddy {
             signBoard.isHidden = true
             return
         }
-        if signBoard.string as? String != reminder.text {
-            let font = NSFont.systemFont(ofSize: max(11, 12 * s), weight: .semibold)
-            let maxWidth: CGFloat = 230 * max(1, s)
-            let bounds = (reminder.text as NSString).boundingRect(
-                with: NSSize(width: maxWidth - 16, height: 200), options: [.usesLineFragmentOrigin], attributes: [.font: font])
-            signBoard.string = reminder.text
-            signBoard.font = font
-            signBoard.fontSize = font.pointSize
-            signBoard.contentsScale = stage.window?.backingScaleFactor ?? 2
-            signBoard.bounds = CGRect(x: 0, y: 0, width: ceil(bounds.width) + 16, height: ceil(bounds.height) + 10)
-            signBoard.borderWidth = max(2, pixel / 2)
-            signBoard.borderColor = reminder.urgent ? CGColor(srgbRed: 0.84, green: 0.23, blue: 0.23, alpha: 1)
-                                                    : CGColor(srgbRed: 0.17, green: 0.11, blue: 0.09, alpha: 1)
+        let key = "\(reminder.urgent)|\(reminder.text)|\(stage.boardScale)"
+        if signText != key {
+            signText = key
+            let art = Billboard.sign(reminder.text, urgent: reminder.urgent)
+            signBoard.contents = art.cgImage()
+            signBoard.bounds = CGRect(x: 0, y: 0, width: CGFloat(art.width) * stage.boardScale,
+                                      height: CGFloat(art.height) * stage.boardScale)
         }
         signBoard.isHidden = false
         // Held just above its raised arms; kept on screen near the top edge.
@@ -1094,6 +1116,9 @@ final class Buddy {
         case .celebrate, .cheer:
             p.arms = .up
             p.eyes = .happy
+        case .holdBoard:
+            p.arms = .up  // Holding the billboard overhead.
+            p.look = 0
         case .sign:
             p.arms = .up  // Holding the sign overhead.
             p.eyes = signReminder?.urgent == true ? .wide : .open

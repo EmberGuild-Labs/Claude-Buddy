@@ -95,6 +95,26 @@ final class BuddyStage: NSView {
     /// While a menu demo runs, every buddy acts it out together.
     private(set) var demoInfo: SessionInfo?
     private var demoUntil: TimeInterval = 0
+    // MARK: Today billboard state
+
+    /// What the billboard shows, and what to do when it's clicked (open a link, connect, refresh).
+    var boardDataProvider: () -> Billboard.Data = { Billboard.Data() }
+    var onBoardAction: ((Billboard.Action) -> Void)?
+    private(set) var boardOpen = false
+    private(set) var boardVisible = false
+    private var boardState = Billboard.State()
+    private var boardRegions: [Billboard.Region] = []
+    private var boardPages = 1
+    private(set) var boardHolders: [Buddy] = []
+    private var boardFrame = CGRect.zero
+    private var boardRenderKey = ""
+    private var boardIdle: TimeInterval = 0
+    private var boardClock: TimeInterval = 0
+    private var boardScroll: CGFloat = 0
+    private let boardLayer = CALayer()
+    /// Points per board pixel: chunky, and a bit bigger when the buddies are bigger.
+    var boardScale: CGFloat { max(2, (pixel / 2).rounded()) }
+
     /// Reminder signs waiting for the main buddy to be free.
     private var signQueue: [Reminder] = []
     /// ⌥-clicking a sign: open its link (or the Today panel).
@@ -113,6 +133,12 @@ final class BuddyStage: NSView {
         wantsLayer = true
         layer?.backgroundColor = .clear
         layer?.masksToBounds = true
+        boardLayer.actions = Self.noActions
+        boardLayer.magnificationFilter = .nearest
+        boardLayer.anchorPoint = CGPoint(x: 0.5, y: 0)
+        boardLayer.zPosition = 20
+        boardLayer.isHidden = true
+        layer?.addSublayer(boardLayer)
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -189,6 +215,155 @@ final class BuddyStage: NSView {
 
     func openReminder(_ reminder: Reminder) { onOpenReminder?(reminder) }
 
+    // MARK: - Today billboard
+
+    func toggleBoard() { boardOpen ? closeBoard() : openBoard() }
+
+    /// The main buddy runs over and hoists the billboard; a second buddy (if there is one)
+    /// grabs the other end.
+    func openBoard() {
+        guard let main, !boardOpen else { return }
+        boardOpen = true
+        boardVisible = false
+        boardIdle = 0
+        boardState = Billboard.State()
+        if (boardDataProvider().snapshot?.missing.isEmpty == false) && (boardDataProvider().snapshot?.upcoming.isEmpty == true) {
+            boardState.tab = .missing
+        }
+        let w = CGFloat(Billboard.width) * boardScale
+        let helper = buddies.filter { !$0.isMain && !$0.isLeaving && !$0.isHeld }
+            .min { abs($0.pos.x - main.pos.x) < abs($1.pos.x - main.pos.x) }
+        let margin: CGFloat = 12
+        if let helper {
+            // Holders stand under the board's left and right thirds.
+            let left = min(max(main.pos.x - w * 0.22, margin), bounds.width - w - margin)
+            let (a, b) = helper.pos.x < main.pos.x ? (helper, main) : (main, helper)
+            a.goHoldBoard(at: left + w * 0.22)
+            b.goHoldBoard(at: left + w * 0.78)
+            boardHolders = [main, helper]
+        } else {
+            main.goHoldBoard(at: min(max(main.pos.x, w / 2 + margin), bounds.width - w / 2 - margin))
+            boardHolders = [main]
+        }
+    }
+
+    func closeBoard() {
+        guard boardOpen else { return }
+        boardOpen = false
+        boardVisible = false
+        boardHolders.forEach { $0.releaseBoard() }
+        boardHolders = []
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        boardLayer.isHidden = true
+        CATransaction.commit()
+    }
+
+    private func tickBoard(_ dt: TimeInterval) {
+        guard boardOpen else { return }
+        // A holder that got picked up or left drops out; without the main buddy, the board closes.
+        boardHolders.removeAll { $0.isGone || $0.isLeaving || $0.boardTargetX == nil }
+        guard let main, boardHolders.contains(where: { $0 === main }) else { return closeBoard() }
+
+        let holding = boardHolders.filter(\.isHoldingBoard)
+        if !boardVisible {
+            guard holding.count == boardHolders.count else { return }
+            boardVisible = true
+            showBoard(animated: true)
+        }
+        // Rest the board's bottom on the holders' raised hands.
+        let hands = (holding.map(\.pos.y).min() ?? main.pos.y) + 11 * pixel
+        let xs = holding.map(\.pos.x)
+        let centerX = xs.isEmpty ? main.pos.x : (xs.min()! + xs.max()!) / 2
+        let w = CGFloat(Billboard.width) * boardScale, h = CGFloat(Billboard.height) * boardScale
+        boardFrame = CGRect(x: centerX - w / 2, y: hands, width: w, height: h)
+
+        boardClock += dt
+        let blink = Int(boardClock / 0.4) % 2 == 0
+        if boardState.blink != blink { boardState.blink = blink }
+        if let m = mouse, boardFrame.contains(m) {
+            boardIdle = 0
+            boardState.pointer = CGPoint(x: (m.x - boardFrame.minX) / boardScale, y: (m.y - boardFrame.minY) / boardScale)
+        } else {
+            boardState.pointer = nil
+            boardIdle += dt
+            if boardIdle > 90 { return closeBoard() }  // Nobody's looking; put it away.
+        }
+        renderBoardIfNeeded()
+        boardLayer.position = CGPoint(x: boardFrame.midX.rounded(), y: boardFrame.minY.rounded())
+    }
+
+    private func renderBoardIfNeeded() {
+        let data = boardDataProvider()
+        let minute = Int(Date().timeIntervalSince1970 / 60)
+        let key = "\(boardState.tab)|\(boardState.page)|\(hoveredRegionIndex())|\(boardState.pointer != nil && boardState.blink)|"
+            + "\(data.connected)|\(data.loading)|\(data.error ?? "")|\(data.snapshot?.fetchedAt.timeIntervalSince1970 ?? 0)|\(minute)|\(boardScale)"
+        guard key != boardRenderKey else { return }
+        boardRenderKey = key
+        let result = Billboard.render(data, state: boardState, now: Date())
+        boardRegions = result.regions
+        boardPages = result.pages
+        if boardState.page >= boardPages { boardState.page = boardPages - 1 }
+        boardLayer.contents = result.canvas.cgImage()
+        boardLayer.bounds = CGRect(x: 0, y: 0, width: CGFloat(result.canvas.width) * boardScale,
+                                   height: CGFloat(result.canvas.height) * boardScale)
+    }
+
+    private func hoveredRegionIndex() -> Int {
+        guard let p = boardState.pointer else { return -1 }
+        return boardRegions.lastIndex { $0.rect.contains(p) } ?? -2
+    }
+
+    private func showBoard(animated: Bool) {
+        boardRenderKey = ""
+        renderBoardIfNeeded()
+        boardLayer.isHidden = false
+        guard animated else { return }
+        // Pops up from the holders' hands.
+        let pop = CAKeyframeAnimation(keyPath: "transform.scale")
+        pop.values = reduceMotion ? [1, 1] : [0.2, 1.08, 1]
+        pop.keyTimes = [0, 0.7, 1]
+        pop.duration = 0.28
+        let fade = CABasicAnimation(keyPath: "opacity")
+        fade.fromValue = 0
+        fade.toValue = 1
+        fade.duration = 0.15
+        boardLayer.add(pop, forKey: "pop")
+        boardLayer.add(fade, forKey: "fade")
+    }
+
+    private func boardRegion(at p: CGPoint) -> Billboard.Region? {
+        guard boardVisible, boardFrame.contains(p) else { return nil }
+        let bp = CGPoint(x: (p.x - boardFrame.minX) / boardScale, y: (p.y - boardFrame.minY) / boardScale)
+        return boardRegions.last { $0.rect.contains(bp) }
+    }
+
+    /// Clicks on the billboard (no ⌥ needed).
+    func performBoard(_ action: Billboard.Action) {
+        switch action {
+        case .tab(let t):
+            boardState.tab = t
+            boardState.page = 0
+        case .page(let d):
+            boardState.page = min(max(0, boardState.page + d), boardPages - 1)
+        case .close:
+            closeBoard()
+        case .open, .refresh, .connect:
+            onBoardAction?(action)
+        }
+        boardIdle = 0
+    }
+
+    override func scrollWheel(with event: NSEvent) {
+        guard boardVisible, let m = mouse, boardFrame.contains(m) else { return }
+        boardScroll += event.scrollingDeltaY
+        let step: CGFloat = event.hasPreciseScrollingDeltas ? 40 : 1
+        if abs(boardScroll) >= step {
+            performBoard(.page(boardScroll > 0 ? -1 : 1))
+            boardScroll = 0
+        }
+    }
+
     var extraBuddyCount: Int { buddies.filter { !$0.isMain && !$0.isLeaving }.count }
 
     /// Sends every extra buddy off-screen; the main buddy stays.
@@ -231,6 +406,7 @@ final class BuddyStage: NSView {
         greetings()
         tickGames(dt)
         tickSnow(dt)
+        tickBoard(dt)
         if !signQueue.isEmpty, let main, main.canHoldSign { main.showSign(signQueue.removeFirst()) }
 
         CATransaction.begin()
@@ -411,9 +587,13 @@ final class BuddyStage: NSView {
     private func updateInteractivity() {
         guard let window, let m = mouse else { return }
         let hit = optionHeld && buddies.contains { !$0.isLeaving && $0.hitRect.contains(m) }
-        let want = grabbed != nil || hit
+        // The billboard takes clicks without ⌥ — but only right over it.
+        let onBoard = boardVisible && boardFrame.contains(m)
+        let want = grabbed != nil || hit || onBoard
         if window.ignoresMouseEvents == want { window.ignoresMouseEvents = !want }
-        if want {
+        if onBoard && grabbed == nil && !hit {
+            (boardRegion(at: m) != nil ? NSCursor.pointingHand : NSCursor.arrow).set()
+        } else if want {
             (grabbed != nil ? NSCursor.closedHand : NSCursor.openHand).set()
         } else if interactive {
             NSCursor.arrow.set()
@@ -423,6 +603,10 @@ final class BuddyStage: NSView {
 
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
+        if boardVisible && boardFrame.contains(p) && !optionHeld {
+            if let region = boardRegion(at: p) { performBoard(region.action) }
+            return
+        }
         // Topmost (last added) buddy wins.
         guard let b = buddies.last(where: { !$0.isLeaving && $0.hitRect.contains(p) }) else { return }
         grabbed = b

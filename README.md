@@ -37,10 +37,12 @@ A tiny pixel-art Claude critter that lives along the bottom of your Mac's screen
   - **Piggyback:** ⌥-drag one buddy and drop it on another's head to ride along. Stacks go three high.
 - **Dances to your music.** When Spotify or Apple Music is playing, idle buddies dance in sync with floating music notes, and standing buddies bob along. Hover the main buddy while it dances to see the song. The apps don't report tempo, so each song gets a steady made-up beat (96–132 BPM, the same every time for a given song) instead of real beat-matching. Buddies start dancing the next time you press play, skip, or pause.
 - **Canvas: what's due, and reminders.** Connect your school's Canvas and:
-  - Open **Today** from the menu bar (⌘T while the menu is open) to see missing work, what's due today, tomorrow, and this week, whether each item is submitted, and your current grades. Click any item to open it in Canvas.
+  - Open **Today** from the menu bar (⌘T while the menu is open). The buddies run over and **hold up a pixel-art billboard**, styled like a video-game menu: an arcade font, pixel icons, and tabs for **DUE / MISSING / GRADES**. It shows what's due today, tomorrow, and this week, what's submitted, and your grades. Hover a row for the ► cursor and its course; click it to open it in Canvas. Scroll or use ◄ ► to page, and click × to put it away. The main buddy holds it, and if another buddy is around, it grabs the other end.
   - The main buddy **holds up a sign** a day, 3 hours, and 1 hour before each unfinished assignment is due. The last one is urgent: it gets a red border and the buddy hops for attention.
   - Once a day it gives you a heads-up about missing work. A pile of old missing assignments becomes one reminder, not a flood.
   - ⌥-click the sign to open that assignment.
+
+  ![The Today billboard](docs/billboard.png)
 - **Hats and seasons.** Session buddies wear party hats, top hats, beanies, cowboy hats, crowns, propeller caps and flowers. The main buddy dresses for the season:
 
   | When | Main buddy |
@@ -122,7 +124,7 @@ Menu-bar menu:
 | Item | What it does |
 |---|---|
 | Status lines | What Claude is doing, whether hooks are installed, where the floor is, and server status |
-| Today… | Your Canvas assignments, missing work, and grades |
+| Today… / Put Away Today Board | The buddies hold up the Today billboard (or put it away) |
 | Canvas: N due today · N missing | Quick status (once connected) |
 | Connect Canvas… / Canvas Settings… | Connect or disconnect Canvas; turn due-date reminders on or off |
 | Show Buddy | Hide or show the buddy (hiding also pauses its frame loop) |
@@ -161,7 +163,9 @@ Claude Code ──hook (curl)──▶ 127.0.0.1:47823 ──▶ ClaudeActivity 
 | `MusicWatcher.swift` | Knows when Spotify or Apple Music is playing, from their system-wide notifications |
 | `Canvas.swift` | Canvas REST client (planner items, missing submissions, course grades) and parsing |
 | `School.swift` | Refreshing Canvas data, and the reminder rules (when the buddy holds up a sign) |
-| `SchoolUI.swift` | The Today panel and Canvas settings window (SwiftUI) |
+| `Billboard.swift` | The Today billboard and reminder placard: layout, tabs, paging, and click regions, all drawn in pixels |
+| `PixelFont.swift` | The 5×7 arcade font and 7×7 pixel icons, drawn in code |
+| `SchoolUI.swift` | The Canvas settings window (SwiftUI) |
 | `Keychain.swift` | Stores the Canvas token in the macOS Keychain |
 | `SelfTest.swift` | `--self-test`: simulates sessions, ledges, games, piggyback and dancing off-screen, and checks the results |
 | `BuddyStage.swift` | The whole-screen stage holding all the buddies: one display link, matching sessions to buddies, window ledges, games (tag, conga), the shared beat, cursor tracking, ⌥-mouse routing, effects |
@@ -212,6 +216,7 @@ Debugging: `curl http://127.0.0.1:47823/claude-buddy/status` returns a JSON snap
 - **Music without permissions:** Spotify and Apple Music announce play and pause through system-wide notifications, which any app can listen to. Asking the players directly would trigger a permission prompt, and real beat detection would need to record system audio. Neither seemed worth it for a desktop pet.
 - **Games are coordinated by the stage:** it decides when tag or a conga line happens and who's "it". Each buddy only plays its own part, and drops out if its Claude session gets busy.
 - **Canvas via a personal access token:** it gives the full picture (submitted/missing status, grades, and the planner) through Canvas's documented API: `/api/v1/planner/items`, `/api/v1/users/self/missing_submissions`, and `/api/v1/courses?include[]=total_scores`. The Canvas address is always forced to `https`, and pagination links are only followed on that same host, so the token can't leak to another server.
+- **The billboard is drawn in pixels, not as a window:** it lives on the buddies' overlay, so they can hold it. The font and icons are hand-made pixel art in code, so there are no font files or licenses. The overlay normally passes every click through; it only accepts clicks while the pointer is directly over the billboard. Canvas Settings stays a normal Mac window, because typing a token needs real text fields.
 - **Reminder rules** live in `ReminderPlanner`, a pure function the self-test checks. Each reminder fires once, tracked by key: only the latest applicable warning fires (24 h, 3 h, or 1 h), submitted or checked-off work is skipped, and at most 3 signs appear per check.
 - **No secrets in git:** a pre-commit hook (`.githooks/pre-commit`) blocks commits containing anything that looks like a Canvas token, GitHub/Anthropic/OpenAI/AWS key, bearer token, or private key. `.gitignore` also excludes `.env` and key files. Turn it on in your clone with `git config core.hooksPath .githooks`.
 - **Cursor reactions without special permissions:** the frame loop just reads the cursor position. A "fast swipe" is detected along the cursor's path between frames, so it still works at the 15 fps idle rate. Only the closest buddy comes over to play, and there are cooldowns so it doesn't get clingy.

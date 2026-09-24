@@ -218,52 +218,84 @@ enum SelfTest {
         simulate(10, until: { main2.signReminder != nil })
         check("the main buddy holds up the reminder sign", main2.signReminder?.text == "Test sign")
 
+        // 12. The pixel billboard: text, layout, and the buddies holding it up.
+        check("pixel font: caps, accents folded, unknown → ?",
+              String(PixelFont.normalize("Café ✓")) == "CAFE ?" && PixelFont.width(of: "HELLO") == 29)
+        check("pixel font: long titles are shortened to fit",
+              PixelFont.fit("Discussion: Industrial Revolution", maxWidth: 60).hasSuffix("..")
+                && PixelFont.width(of: PixelFont.fit("Discussion: Industrial Revolution", maxWidth: 60)) <= 60)
+        let boardData = Billboard.Data(connected: true, snapshot: BoardPreview.sampleSnapshot(now: now))
+        let rendered = Billboard.render(boardData, state: Billboard.State(), now: now)
+        check("billboard has tabs, a close button, and clickable assignments",
+              rendered.regions.filter { if case .tab = $0.action { return true }; return false }.count == 3
+                && rendered.regions.contains { $0.action == .close }
+                && rendered.regions.contains { if case .open = $0.action { return true }; return false })
+        let notConnected = Billboard.render(Billboard.Data(connected: false), state: Billboard.State(), now: now)
+        check("billboard offers to connect Canvas when it isn't connected",
+              notConnected.regions.contains { $0.action == .connect })
+
+        stage.boardDataProvider = { boardData }
+        simulate(2)
+        stage.openBoard()
+        simulate(6, until: { stage.boardVisible })
+        check("billboard goes up once its holders are in place", stage.boardVisible
+                && stage.boardHolders.allSatisfy(\.isHoldingBoard), "holders=\(stage.boardHolders.map { mode($0) })")
+        check("two buddies hold it when there's a helper around",
+              stage.boardHolders.count == min(2, stage.buddies.filter { !$0.isLeaving }.count),
+              "holders=\(stage.boardHolders.count) buddies=\(stage.buddies.count)")
+        stage.performBoard(.tab(.grades))
+        stage.performBoard(.close)
+        simulate(2)
+        check("closing the billboard frees the holders",
+              !stage.boardOpen && !stage.buddies.contains(where: \.isHoldingBoard))
+
         print(failures == 0 ? "All checks passed." : "\(failures) check(s) failed.")
         return failures == 0 ? 0 : 1
     }
 }
 
-#if DEBUG
-import SwiftUI
-
-/// Debug builds: `ClaudeBuddy --render-today out.png` renders the Today panel with sample data.
-enum TodayPreview {
-    @MainActor
-    static func render(to url: URL) {
-        _ = NSApplication.shared
-        let now = Date()
+/// `ClaudeBuddy --render-board out.png [tab]` draws the Today billboard with sample data.
+enum BoardPreview {
+    static func sampleSnapshot(now: Date = Date()) -> SchoolSnapshot {
         func item(_ id: String, _ title: String, _ course: String, hours: Double, submitted: Bool = false, kind: String = "assignment") -> SchoolItem {
-            var i = SchoolItem(id: id, title: title, course: course, due: now.addingTimeInterval(hours * 3600), url: nil, kind: kind)
+            var i = SchoolItem(id: id, title: title, course: course, due: now.addingTimeInterval(hours * 3600),
+                               url: URL(string: "https://school.instructure.com/courses/1/assignments/\(id)"), kind: kind)
             i.submitted = submitted
             return i
         }
         var missing = item("m", "Chapter 4 Reading Questions", "English 11 - Period 2", hours: -50)
         missing.missing = true
-        let snap = SchoolSnapshot(userName: "Preview", upcoming: [
+        return SchoolSnapshot(userName: "Sam", upcoming: [
             item("1", "Lab Report: Titration", "AP Chemistry - Period 3", hours: 0.7),
             item("2", "Worksheet 3.2", "Algebra II - Period 1", hours: 2, submitted: true),
             item("3", "Unit 2 Quiz", "US History - Period 5", hours: 20, kind: "quiz"),
-            item("4", "Essay Draft", "English 11 - Period 2", hours: 70),
+            item("4", "Essay Draft: The Great Gatsby", "English 11 - Period 2", hours: 70),
             item("5", "Discussion: Industrial Revolution", "US History - Period 5", hours: 96, kind: "discussion_topic"),
+            item("6", "Spanish Vocab Quiz", "Spanish III", hours: 26, kind: "quiz"),
         ], missing: [missing], grades: [
             CourseGrade(id: 1, name: "AP Chemistry - Period 3", score: 91.5, grade: "A-"),
-            CourseGrade(id: 2, name: "Algebra II - Period 1", score: 87.2, grade: "B+"),
-            CourseGrade(id: 3, name: "English 11 - Period 2", score: nil, grade: nil),
+            CourseGrade(id: 2, name: "Algebra II - Period 1", score: 84.2, grade: "B"),
+            CourseGrade(id: 3, name: "English 11 - Period 2", score: 77.0, grade: "C+"),
+            CourseGrade(id: 4, name: "Spanish III", score: nil, grade: nil),
         ], fetchedAt: now.addingTimeInterval(-120))
-        let store = SchoolStore()
-        store.usePreview(snap)
-        let size = NSSize(width: 420, height: 640)
-        let host = NSHostingView(rootView: TodayView(store: store, hover: HoverState(), connect: {}))
-        host.frame = NSRect(origin: .zero, size: size)
-        let window = NSWindow(contentRect: NSRect(origin: CGPoint(x: -10_000, y: -10_000), size: size),
-                              styleMask: [.titled], backing: .buffered, defer: false)
-        window.contentView = host
-        window.appearance = NSAppearance(named: CommandLine.arguments.contains("--dark") ? .darkAqua : .aqua)
-        // Let SwiftUI lay out and draw.
-        for _ in 0..<5 { RunLoop.main.run(until: Date().addingTimeInterval(0.1)); host.layoutSubtreeIfNeeded() }
-        guard let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { return }
-        host.cacheDisplay(in: host.bounds, to: rep)
-        try? rep.representation(using: .png, properties: [:])?.write(to: url)
+    }
+
+    static func render(to url: URL, tab: Billboard.Tab, scale: Int = 2) {
+        let data = Billboard.Data(connected: true, snapshot: sampleSnapshot())
+        // Pretend the pointer is over the first assignment row to show the ► cursor.
+        let state = Billboard.State(tab: tab, pointer: CGPoint(x: 40, y: CGFloat(Billboard.height - 5 - 24 - 15)))
+        let board = Billboard.render(data, state: state, now: Date()).canvas
+        // Buddies are drawn at 2× the board's pixel size (buddy pixel = 4 pt, board pixel = 2 pt).
+        let holder = BuddyArt.render(Pose(arms: .up, hat: .none)).scaled(by: 2)
+        let helper = BuddyArt.render(Pose(arms: .up, hat: .topHat)).scaled(by: 2)
+        let floor = 8, hands = floor + 22
+        var sheet = PixelCanvas(width: board.width + 16, height: board.height + hands + 6)
+        sheet.fill(0, 0, sheet.width, sheet.height, RGBA(hex: 0x6B8CAE))
+        sheet.fill(0, 0, sheet.width, floor, RGBA(hex: 0x4A6A8C))
+        sheet.draw(holder, x: 8 + Int(Double(board.width) * 0.22) - holder.width / 2, y: floor)
+        sheet.draw(helper, x: 8 + Int(Double(board.width) * 0.78) - helper.width / 2, y: floor)
+        sheet.draw(board, x: 8, y: hands)
+        let png = NSBitmapImageRep(cgImage: sheet.scaled(by: scale).cgImage()).representation(using: .png, properties: [:])
+        try? png?.write(to: url)
     }
 }
-#endif

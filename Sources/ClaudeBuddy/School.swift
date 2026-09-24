@@ -113,15 +113,7 @@ final class SchoolStore: ObservableObject {
         refresh()
     }
 
-    var isConnected: Bool {
-        #if DEBUG
-        if previewing { return true }
-        #endif
-        return canvasHost != nil && Keychain.load(account: Self.tokenAccount) != nil
-    }
-    #if DEBUG
-    var previewing: Bool { snapshot?.userName == "Preview" }
-    #endif
+    var isConnected: Bool { canvasHost != nil && Keychain.load(account: Self.tokenAccount) != nil }
 
     private var client: CanvasClient? {
         guard let host = canvasHost, let token = Keychain.load(account: Self.tokenAccount) else { return nil }
@@ -205,12 +197,3 @@ final class SchoolStore: ObservableObject {
     }
 }
 
-#if DEBUG
-extension SchoolStore {
-    /// Debug builds only: show a sample snapshot (for rendering the Today panel without Canvas).
-    func usePreview(_ snapshot: SchoolSnapshot) {
-        self.snapshot = snapshot
-        canvasHost = URL(string: "https://school.instructure.com")
-    }
-}
-#endif

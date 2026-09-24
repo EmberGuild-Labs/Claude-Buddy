@@ -30,7 +30,7 @@ final class MenuController: NSObject, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
 
-        let today = item("Today…", #selector(openToday))
+        let today = item(overlay.stage.boardOpen ? "Put Away Today Board" : "Today…", #selector(openToday))
         today.keyEquivalent = "t"
         menu.addItem(today)
         if let summary = school.summary { menu.addItem(info(summary)) }
@@ -222,7 +222,10 @@ final class MenuController: NSObject, NSMenuDelegate {
         }
     }
 
-    @objc private func openToday() { schoolWindows.showToday() }
+    @objc private func openToday() {
+        school.refreshIfStale()
+        overlay.stage.toggleBoard()
+    }
     @objc private func openCanvasSettings() { schoolWindows.showSettings() }
 
     @objc private func dismissExtras() {

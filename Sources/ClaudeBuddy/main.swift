@@ -24,8 +24,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let school = SchoolStore()
         let windows = SchoolWindows(store: school)
         school.onReminder = { [weak overlay] r in overlay?.stage.showReminder(r) }
-        overlay.stage.onOpenReminder = { r in
-            if let url = r.url { NSWorkspace.shared.open(url) } else { windows.showToday() }
+        overlay.stage.onOpenReminder = { [weak overlay] r in
+            if let url = r.url { NSWorkspace.shared.open(url) } else { overlay?.stage.openBoard() }
+        }
+        overlay.stage.boardDataProvider = {
+            Billboard.Data(connected: school.isConnected, loading: school.isRefreshing, error: school.lastError, snapshot: school.snapshot)
+        }
+        overlay.stage.onBoardAction = { action in
+            switch action {
+            case .open(let url): NSWorkspace.shared.open(url)
+            case .connect: windows.showSettings()
+            case .refresh: school.refresh()
+            default: break
+            }
         }
         self.school = school
         schoolWindows = windows
@@ -45,12 +56,12 @@ func argument(after flag: String) -> String? {
     return args[i + 1]
 }
 
-#if DEBUG
-if let file = argument(after: "--render-today") {
-    MainActor.assumeIsolated { TodayPreview.render(to: URL(fileURLWithPath: file)) }
+if let file = argument(after: "--render-board") {
+    let tabName = argument(after: file) ?? "due"
+    let tab: Billboard.Tab = tabName == "missing" ? .missing : tabName == "grades" ? .grades : .due
+    BoardPreview.render(to: URL(fileURLWithPath: file), tab: tab)
     exit(0)
 }
-#endif
 if args.contains("--self-test") {
     exit(SelfTest.run())
 }

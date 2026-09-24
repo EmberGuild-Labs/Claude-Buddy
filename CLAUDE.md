@@ -30,7 +30,7 @@ into source, tests, fixtures, or docs. Enable the secret-blocking hook in a clon
 
 - Build: `swift build`. App bundle: `./scripts/build-app.sh [--install] [--universal] [--zip]`.
 - Preview art: `.build/debug/ClaudeBuddy --render-sprites /tmp/sprites.png`
-- Today panel preview (debug builds only): `.build/debug/ClaudeBuddy --render-today /tmp/today.png`
+- Billboard preview with sample data: `.build/debug/ClaudeBuddy --render-board /tmp/board.png [due|missing|grades]`
 - Behavior tests: `swift build && .build/debug/ClaudeBuddy --self-test` (must print "All checks passed.";
   it simulates on a fake clock, so it's fast and works even while the display is asleep). Run it after
   touching `Buddy.swift` or `BuddyStage.swift`.
