@@ -11,10 +11,12 @@ final class MenuController: NSObject, NSMenuDelegate {
     private let school: SchoolStore
     private let schoolWindows: SchoolWindows
     private let hotKey: HotKey
+    private let napHotKey: HotKey
 
     init(settings: Settings, activity: ClaudeActivity, overlay: OverlayController, server: EventServer,
-         school: SchoolStore, schoolWindows: SchoolWindows, hotKey: HotKey) {
+         school: SchoolStore, schoolWindows: SchoolWindows, hotKey: HotKey, napHotKey: HotKey) {
         self.hotKey = hotKey
+        self.napHotKey = napHotKey
         self.school = school
         self.schoolWindows = schoolWindows
         self.settings = settings
@@ -40,7 +42,7 @@ final class MenuController: NSObject, NSMenuDelegate {
         }
         menu.addItem(today)
         let shortcutMenu = NSMenu()
-        for choice in HotKey.Choice.allCases {
+        for choice in HotKey.Choice.todayChoices {
             let it = item(choice.title, #selector(setShortcut(_:)), on: choice == shortcut)
             it.representedObject = choice.rawValue
             shortcutMenu.addItem(it)
@@ -50,6 +52,23 @@ final class MenuController: NSObject, NSMenuDelegate {
             shortcutMenu.addItem(info("\(shortcut.title) is taken by another app. Pick another."))
         }
         menu.addItem(submenu(hotKey.failed ? "Today Shortcut ⚠︎" : "Today Shortcut", shortcutMenu))
+
+        let nap = overlay.stage.nap
+        let napItem = item(nap.isNapping ? "Wake Up" : "Take a Nap", #selector(toggleNap))
+        let napShortcut = settings.napShortcut
+        if napShortcut != .off && !napHotKey.failed {
+            napItem.keyEquivalent = napShortcut.menuKey
+            napItem.keyEquivalentModifierMask = napShortcut.menuModifiers
+        }
+        if nap.isActive && !nap.isNapping { napItem.action = nil }  // Busy setting up or putting the bed away.
+        menu.addItem(napItem)
+        let napMenu = NSMenu()
+        for choice in HotKey.Choice.napChoices {
+            let it = item(choice.title, #selector(setNapShortcut(_:)), on: choice == napShortcut)
+            it.representedObject = choice.rawValue
+            napMenu.addItem(it)
+        }
+        menu.addItem(submenu(napHotKey.failed ? "Nap Shortcut ⚠︎" : "Nap Shortcut", napMenu))
         if let summary = school.summary { menu.addItem(info(summary)) }
         menu.addItem(item(school.isConnected ? "Canvas Settings…" : "Connect Canvas…", #selector(openCanvasSettings)))
         menu.addItem(.separator())
@@ -251,6 +270,16 @@ final class MenuController: NSObject, NSMenuDelegate {
         settings.todayShortcut = choice
         if !hotKey.register(choice) {
             alert("Shortcut already in use", "Another app is using \(choice.title). Pick a different Today shortcut.", style: .warning)
+        }
+    }
+
+    @objc private func toggleNap() { overlay.stage.toggleNap() }
+
+    @objc private func setNapShortcut(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String, let choice = HotKey.Choice(rawValue: raw) else { return }
+        settings.napShortcut = choice
+        if !napHotKey.register(choice) {
+            alert("Shortcut already in use", "Another app is using \(choice.title). Pick a different nap shortcut.", style: .warning)
         }
     }
 

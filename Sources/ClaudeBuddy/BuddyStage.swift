@@ -64,6 +64,9 @@ final class BuddyStage: NSView {
 
     private(set) var buddies: [Buddy] = []
     private var main: Buddy? { buddies.first(where: \.isMain) }
+    var mainBuddy: Buddy? { main }
+    /// The main buddy's nap (closet, bed, and all).
+    private(set) lazy var nap = NapDirector(stage: self)
     var buddyCount: Int { buddies.count }
 
     // Shared cursor state, read by every buddy.
@@ -139,6 +142,7 @@ final class BuddyStage: NSView {
         boardLayer.zPosition = 20
         boardLayer.isHidden = true
         layer?.addSublayer(boardLayer)
+        nap.attach(to: layer)
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -172,7 +176,7 @@ final class BuddyStage: NSView {
     var status: [String: Any] {
         ["frames": frames, "fps": currentFPS, "running": isRunning, "groundY": Int(groundY),
          "width": Int(bounds.width), "height": Int(bounds.height), "buddies": buddies.map(\.status),
-         "windowLedges": windowPlatforms.count, "board": boardOpen ? (boardVisible ? "up" : "gathering") : "closed", "music": musicPlaying ? (musicTrack ?? "playing") : "off",
+         "windowLedges": windowPlatforms.count, "board": boardOpen ? (boardVisible ? "up" : "gathering") : "closed", "nap": nap.phase.rawValue, "music": musicPlaying ? (musicTrack ?? "playing") : "off",
          "game": tagIt != nil ? "tag" : (congaLeader != nil ? "conga" : "none"),
          "tagIt": tagIt.flatMap { b in buddies.firstIndex { $0 === b } } ?? -1]
     }
@@ -217,12 +221,26 @@ final class BuddyStage: NSView {
 
     // MARK: - Today billboard
 
-    func toggleBoard() { boardOpen ? closeBoard() : openBoard() }
+    func toggleBoard() {
+        // Napping? Wake up first, then bring the board.
+        if nap.isActive {
+            nap.openBoardAfter = true
+            nap.wake()
+            return
+        }
+        boardOpen ? closeBoard() : openBoard()
+    }
+
+    /// Take a nap, or wake up if already napping.
+    func toggleNap() {
+        if boardOpen { closeBoard() }
+        nap.toggle()
+    }
 
     /// The main buddy runs over and hoists the billboard; a second buddy (if there is one)
     /// grabs the other end.
     func openBoard() {
-        guard let main, !boardOpen else { return }
+        guard let main, !boardOpen, !nap.isActive else { return }
         boardOpen = true
         boardVisible = false
         boardIdle = 0
@@ -407,6 +425,7 @@ final class BuddyStage: NSView {
         tickGames(dt)
         tickSnow(dt)
         tickBoard(dt)
+        nap.tick(dt)
         if !signQueue.isEmpty, let main, main.canHoldSign { main.showSign(signQueue.removeFirst()) }
 
         CATransaction.begin()
@@ -609,6 +628,11 @@ final class BuddyStage: NSView {
         }
         // Topmost (last added) buddy wins.
         guard let b = buddies.last(where: { !$0.isLeaving && $0.hitRect.contains(p) }) else { return }
+        if b.isScripted {
+            // ⌥-click the napping buddy to wake it; it can't be picked up mid-routine.
+            if nap.isNapping { nap.wake() }
+            return
+        }
         grabbed = b
         b.grab(at: p, time: event.timestamp)
     }

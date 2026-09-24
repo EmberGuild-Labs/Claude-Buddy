@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var school: SchoolStore?
     private var schoolWindows: SchoolWindows?
     private var hotKey: HotKey?
+    private var napHotKey: HotKey?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         if let id = Bundle.main.bundleIdentifier,
@@ -24,6 +25,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         server.statusProvider = { [weak overlay, weak self] in
             var status = overlay?.stage.status ?? [:]
             if let hk = self?.hotKey { status["todayShortcut"] = hk.failed ? "\(hk.registered.title) (in use by another app)" : hk.registered.title }
+            if let hk = self?.napHotKey { status["napShortcut"] = hk.failed ? "\(hk.registered.title) (in use by another app)" : hk.registered.title }
             return status
         }
         do { try server.start() } catch { NSLog("Claude Buddy: server failed to start: \(error)") }
@@ -45,16 +47,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         // ⌃⌥T (or the chosen shortcut) summons the Today billboard from any app.
-        let hotKey = HotKey { [weak overlay, weak school] in
+        let hotKey = HotKey(id: 1) { [weak overlay, weak school] in
             school?.refreshIfStale()
             overlay?.stage.toggleBoard()
         }
         hotKey.register(settings.todayShortcut)
         self.hotKey = hotKey
+        // ⌃⌥N: take a nap / wake up.
+        let napHotKey = HotKey(id: 2) { [weak overlay] in overlay?.stage.toggleNap() }
+        napHotKey.register(settings.napShortcut)
+        self.napHotKey = napHotKey
         self.school = school
         schoolWindows = windows
         menu = MenuController(settings: settings, activity: activity, overlay: overlay, server: server,
-                              school: school, schoolWindows: windows, hotKey: hotKey)
+                              school: school, schoolWindows: windows, hotKey: hotKey, napHotKey: napHotKey)
         self.overlay = overlay
     }
 }

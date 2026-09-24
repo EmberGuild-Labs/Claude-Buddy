@@ -45,6 +45,14 @@ A tiny pixel-art Claude critter that lives along the bottom of your Mac's screen
   ![The Today billboard (sample data)](docs/billboard.png)
 
   *Picture made with sample data. The app itself only ever shows your real Canvas assignments.*
+- **Naptime.** Press **⌃⌥N** (or menu → **Take a Nap**):
+  - A little wardrobe rises out of the floor at the far left. The main buddy walks over, opens the door, and steps inside (the closet rattles while it rummages).
+  - It comes out pulling a bed on wheels and hauls it across the screen to the right, while the closet shuts and sinks back down.
+  - It hops onto the mattress and naps under a blanket, with Z's floating up.
+  - **⌥-click it** (or press ⌃⌥N again, or choose **Wake Up**) to wake it. It stretches, hops off, and pushes the bed off the right edge of the screen.
+  - Claude events and reminders wait until it wakes. Pressing the Today shortcut during a nap wakes it first, then brings the billboard.
+
+  ![Nap props](docs/nap.png)
 - **Hats and seasons.** Session buddies wear party hats, top hats, beanies, cowboy hats, crowns, propeller caps and flowers. The main buddy dresses for the season:
 
   | When | Main buddy |
@@ -127,6 +135,8 @@ Menu-bar menu:
 |---|---|
 | Status lines | What Claude is doing, whether hooks are installed, where the floor is, and server status |
 | Today… / Put Away Today Board | The buddies hold up the Today billboard (or put it away). Shortcut: **⌃⌥T** from any app |
+| Take a Nap / Wake Up | Start the nap routine, or wake the buddy. Shortcut: **⌃⌥N** from any app |
+| Nap Shortcut | Choose ⌃⌥N (default), ⌥⌘N, ⌃⌥Z, or Off |
 | Today Shortcut | Choose ⌃⌥T (default), ⌥⌘T, ⌃⌥Space, ⌥T, or Off. ⌥T works, but ⌥T normally types "†", and that stops working everywhere while it's the shortcut |
 | Canvas: N due today · N missing | Quick status (once connected) |
 | Connect Canvas… / Canvas Settings… | Connect or disconnect Canvas; turn due-date reminders on or off |
@@ -167,7 +177,8 @@ Claude Code ──hook (curl)──▶ 127.0.0.1:47823 ──▶ ClaudeActivity 
 | `Canvas.swift` | Canvas REST client (planner items, missing submissions, course grades) and parsing |
 | `School.swift` | Refreshing Canvas data, and the reminder rules (when the buddy holds up a sign) |
 | `Billboard.swift` | The Today billboard and reminder placard: layout, tabs, paging, and click regions, all drawn in pixels |
-| `HotKey.swift` | The system-wide Today shortcut (Carbon hot keys, no Accessibility permission needed) |
+| `HotKey.swift` | The system-wide Today and Nap shortcuts (Carbon hot keys, no Accessibility permission needed) |
+| `Nap.swift` | The nap: closet and bed pixel art, and the director that runs the routine step by step |
 | `PixelFont.swift` | The 5×7 arcade font and 7×7 pixel icons, drawn in code |
 | `SchoolUI.swift` | The Canvas settings window (SwiftUI) |
 | `Keychain.swift` | Stores the Canvas token in the macOS Keychain |

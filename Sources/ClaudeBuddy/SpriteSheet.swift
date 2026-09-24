@@ -37,7 +37,7 @@ enum SpriteSheet {
     private static func thinkCanvas() -> PixelCanvas { canvas(of: BuddyArt.thinkBubble(dots: 3)) }
     private static func alertCanvas() -> PixelCanvas { canvas(of: BuddyArt.alertBubble) }
 
-    private static func canvas(of img: CGImage) -> PixelCanvas {
+    static func canvas(of img: CGImage) -> PixelCanvas {
         var c = PixelCanvas(width: img.width, height: img.height)
         let rep = NSBitmapImageRep(cgImage: img)
         for y in 0..<img.height {

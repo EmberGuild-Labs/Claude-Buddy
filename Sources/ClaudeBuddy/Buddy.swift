@@ -36,17 +36,24 @@ final class Buddy {
     private(set) var signReminder: Reminder?
     /// Where it should stand to hold up the Today billboard (nil = not on billboard duty).
     private(set) var boardTargetX: CGFloat?
+
+    /// Poses a director can put the buddy in while it's scripted.
+    enum ScriptPose: Equatable { case stand, walk, jump, sleep, stretch(progress: Double), hidden }
+    private var scriptPose = ScriptPose.stand
     private var tagText: String?
     private var currentImage: CGImage?
 
     private enum Mode: Equatable {
         case stand, sit, walk, sleep, wake, work(ToolKind), alert, hello, celebrate, pet, dizzy
         case held, tossed, arrive, chase, leap, dance, highFive, tag, conga, ride, cheer, sign, holdBoard
+        /// Moved and posed by a director (the nap), not by its own brain or physics.
+        case scripted
 
         /// Reactions play to the end instead of being interrupted by Claude activity.
         var isReaction: Bool {
             switch self {
-            case .wake, .hello, .celebrate, .pet, .dizzy, .held, .tossed, .arrive, .leap, .highFive, .ride, .cheer, .sign, .holdBoard: true
+            case .wake, .hello, .celebrate, .pet, .dizzy, .held, .tossed, .arrive, .leap, .highFive, .ride, .cheer, .sign, .holdBoard,
+                 .scripted: true
             default: false
             }
         }
@@ -203,6 +210,7 @@ final class Buddy {
 
     var isHeld: Bool { mode == .held }
     var isHoldingBoard: Bool { mode == .holdBoard }
+    var isScripted: Bool { mode == .scripted }
     var isWalkingWander: Bool { mode == .walk && (walkPurpose == .wander || walkPurpose == .pace) }
     var isInTag: Bool { mode == .tag || pendingGame == .tag }
     var isInConga: Bool {
@@ -242,7 +250,7 @@ final class Buddy {
 
     func pulse(_ p: Pulse) {
         lastStimulus = Date()
-        guard !isLeaving, mode != .held, mode != .tossed, mode != .arrive, mode != .leap else { return }
+        guard !isLeaving, mode != .held, mode != .tossed, mode != .arrive, mode != .leap, mode != .scripted else { return }
         switch p {
         case .finished:
             enter(.celebrate, duration: stage.reduceMotion ? 1.4 : 2.8)
@@ -309,7 +317,7 @@ final class Buddy {
     var canHoldSign: Bool {
         guard !isLeaving, onGround, carrier == nil, rider == nil, boardTargetX == nil else { return false }
         switch mode {
-        case .held, .tossed, .arrive, .leap, .ride, .celebrate, .tag, .conga, .sign, .highFive: return false
+        case .held, .tossed, .arrive, .leap, .ride, .celebrate, .tag, .conga, .sign, .highFive, .scripted: return false
         default: return true
         }
     }
@@ -318,6 +326,33 @@ final class Buddy {
         signReminder = reminder
         facing = stage.mouse.map { $0.x >= pos.x ? 1 : -1 } ?? facing
         enter(.sign, duration: reminder.urgent ? 10 : 8)
+    }
+
+    // MARK: - Scripted (the nap)
+
+    func beginScript() {
+        boardTargetX = nil
+        signReminder = nil
+        detachFromCarrier()
+        vel = .zero
+        scriptPose = .stand
+        enter(.scripted, duration: .infinity)
+    }
+
+    func script(x: CGFloat, y: CGFloat, facing: CGFloat, pose: ScriptPose) {
+        pos = CGPoint(x: x, y: y)
+        self.facing = facing
+        scriptPose = pose
+    }
+
+    func endScript() {
+        guard mode == .scripted else { return }
+        scriptPose = .stand
+        pos.y = stage.groundY
+        platform = 0
+        onGround = true
+        lastStimulus = Date()
+        enter(.hello, duration: 1.2)
     }
 
     /// Go to `x` on the floor and hold the Today billboard overhead.
@@ -873,6 +908,7 @@ final class Buddy {
     }
 
     private func tickPhysics(_ dt: TimeInterval) {
+        if mode == .scripted { return }  // The director places it.
         if mode == .held {
             onGround = false
             platform = -1
@@ -881,7 +917,7 @@ final class Buddy {
         }
         // Riding piggyback: stick to the carrier's head.
         if let c = carrier {
-            if c.isGone || c.isHeld || c.isLeaving {
+            if c.isGone || c.isHeld || c.isLeaving || c.isScripted {
                 detachFromCarrier()
                 fallOff()
             } else {
@@ -953,7 +989,7 @@ final class Buddy {
             }
         }
         if mode == .tossed && droppedByUser && rider == nil {
-            for b in stage.buddies where b !== self && b.onGround && !b.isLeaving && !b.isHeld && b.rider == nil
+            for b in stage.buddies where b !== self && b.onGround && !b.isLeaving && !b.isHeld && !b.isScripted && b.rider == nil
                 && b.stackDepth < 2 && abs(b.pos.x - pos.x) < halfWidth * 0.9 {
                 let headY = b.pos.y + b.headHeight
                 if headY <= prevY + 0.5 && headY >= pos.y && headY > bestY {
@@ -1029,6 +1065,7 @@ final class Buddy {
         }
         sprite.setAffineTransform(CGAffineTransform(rotationAngle: angle).scaledBy(x: facing, y: 1))
         root.position = CGPoint(x: pos.x.rounded(), y: pos.y.rounded())
+        root.isHidden = mode == .scripted && scriptPose == .hidden
         updateBubble()
         updateTag()
         updateSign()
@@ -1119,6 +1156,22 @@ final class Buddy {
         case .holdBoard:
             p.arms = .up  // Holding the billboard overhead.
             p.look = 0
+        case .scripted:
+            switch scriptPose {
+            case .stand, .hidden: break
+            case .walk:
+                (p.legs, p.bob) = walkingLegs(fps: 10)
+                p.look = 1
+            case .jump:
+                p.arms = .up
+                p.eyes = .wide
+            case .sleep:
+                p.legs = .tucked
+                p.eyes = .closed
+            case .stretch(let progress):
+                p.arms = progress < 0.75 ? .up : .down
+                p.eyes = progress < 0.4 ? .closed : .happy
+            }
         case .sign:
             p.arms = .up  // Holding the sign overhead.
             p.eyes = signReminder?.urgent == true ? .wide : .open

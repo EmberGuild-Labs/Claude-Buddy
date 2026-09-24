@@ -252,6 +252,29 @@ enum SelfTest {
         check("closing the billboard frees the holders",
               !stage.boardOpen && !stage.buddies.contains(where: \.isHoldingBoard))
 
+        // 14. The nap: closet → bed across the screen → sleep → wake → push the bed off.
+        let napper = stage.buddies[0]
+        stage.nap.start()
+        var sawCloset = false, sawHidden = false
+        simulate(30, until: {
+            if stage.nap.phase == .opening { sawCloset = true }
+            if stage.nap.phase == .inside { sawHidden = true }
+            return stage.nap.isNapping
+        })
+        check("nap: goes into the closet, pulls the bed out, and lies down",
+              sawCloset && sawHidden && stage.nap.isNapping && napper.isScripted
+                && napper.pos.y == stage.groundY + CGFloat(NapArt.mattressTop) * stage.pixel
+                && napper.pos.x > stage.bounds.width / 2, "phase=\(stage.nap.phase) pos=\(napper.pos)")
+        simulate(5)
+        check("nap: stays asleep until woken", stage.nap.isNapping)
+        stage.toggleBoard()  // ⌃⌥T while napping: wake up, then bring the board.
+        simulate(30, until: { !stage.nap.isActive })
+        check("nap: wakes, pushes the bed away, and gets back to normal",
+              !stage.nap.isActive && !napper.isScripted && napper.pos.y == stage.groundY, "phase=\(stage.nap.phase)")
+        simulate(8, until: { stage.boardVisible })
+        check("nap: Today shortcut during a nap brings the board after waking", stage.boardOpen)
+        stage.closeBoard()
+
         // 13. Text fields need an Edit menu for ⌘V to paste.
         let edit = AppMenu.build().items.compactMap(\.submenu).first { $0.title == "Edit" }
         check("Edit menu provides ⌘V paste (and ⌘C, ⌘A)",
@@ -305,6 +328,21 @@ enum BoardPreview {
         sheet.draw(holder, x: 8 + Int(Double(board.width) * 0.22) - holder.width / 2, y: floor)
         sheet.draw(helper, x: 8 + Int(Double(board.width) * 0.78) - helper.width / 2, y: floor)
         sheet.draw(board, x: 8, y: hands)
+        if CommandLine.arguments.contains("--nap") {
+            // The nap props instead: open closet, and the buddy asleep in bed.
+            var nap = PixelCanvas(width: 120, height: 40)
+            nap.fill(0, 0, 120, 40, RGBA(hex: 0x6B8CAE))
+            nap.fill(0, 0, 120, 4, RGBA(hex: 0x4A6A8C))
+            nap.draw(SpriteSheet.canvas(of: NapArt.closetOpen), x: 2, y: 4)
+            let bedX = 70
+            nap.draw(SpriteSheet.canvas(of: NapArt.bed), x: bedX, y: 4)
+            nap.draw(BuddyArt.render(Pose(legs: .tucked, eyes: .closed)), x: bedX + NapArt.sleeperX - 16, y: 4 + NapArt.mattressTop)
+            nap.draw(SpriteSheet.canvas(of: NapArt.blanketImage), x: bedX, y: 4)
+            nap.draw(SpriteSheet.canvas(of: NapArt.closetClosed), x: 30, y: 4)
+            let png = NSBitmapImageRep(cgImage: nap.scaled(by: 4).cgImage()).representation(using: .png, properties: [:])
+            try? png?.write(to: url)
+            return
+        }
         let png = NSBitmapImageRep(cgImage: sheet.scaled(by: scale).cgImage()).representation(using: .png, properties: [:])
         try? png?.write(to: url)
     }

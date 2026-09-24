@@ -50,6 +50,12 @@ final class Settings {
         set { defaults.set(newValue.rawValue, forKey: "todayShortcut") }
     }
 
+    /// System-wide shortcut that starts (or ends) a nap.
+    var napShortcut: HotKey.Choice {
+        get { defaults.string(forKey: "napShortcut").flatMap(HotKey.Choice.init(rawValue:)) ?? .controlOptionN }
+        set { defaults.set(newValue.rawValue, forKey: "napShortcut") }
+    }
+
     /// Buddies hop onto the tops of app windows.
     var climbWindows: Bool {
         get { defaults.object(forKey: "climbWindows") as? Bool ?? true }
