@@ -7,6 +7,8 @@ struct WindowPlatform {
     let origin: CGPoint
     /// The parts of the top edge not covered by windows in front of it.
     let segments: [ClosedRange<CGFloat>]
+    /// Bundle ID of the app that owns the window (for Extras triggers like "on a Finder window").
+    var owner: String? = nil
 }
 
 /// The whole screen, where the buddies live: on the floor (Dock or screen bottom) and on
@@ -67,6 +69,8 @@ final class BuddyStage: NSView {
     var mainBuddy: Buddy? { main }
     /// The main buddy's nap (closet, bed, and all).
     private(set) lazy var nap = NapDirector(stage: self)
+    /// Pack activities (Extras): tricks, routines with props, puppet mode.
+    private(set) lazy var director = ActivityDirector(stage: self)
     var buddyCount: Int { buddies.count }
 
     // Shared cursor state, read by every buddy.
@@ -143,6 +147,7 @@ final class BuddyStage: NSView {
         boardLayer.isHidden = true
         layer?.addSublayer(boardLayer)
         nap.attach(to: layer)
+        director.attach(to: layer)
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -178,7 +183,8 @@ final class BuddyStage: NSView {
          "width": Int(bounds.width), "height": Int(bounds.height), "buddies": buddies.map(\.status),
          "windowLedges": windowPlatforms.count, "board": boardOpen ? (boardVisible ? "up" : "gathering") : "closed", "nap": nap.phase.rawValue, "music": musicPlaying ? (musicTrack ?? "playing") : "off",
          "game": tagIt != nil ? "tag" : (congaLeader != nil ? "conga" : "none"),
-         "tagIt": tagIt.flatMap { b in buddies.firstIndex { $0 === b } } ?? -1]
+         "tagIt": tagIt.flatMap { b in buddies.firstIndex { $0 === b } } ?? -1,
+         "extras": director.status]
     }
 
     // MARK: - External input
@@ -222,6 +228,7 @@ final class BuddyStage: NSView {
     // MARK: - Today billboard
 
     func toggleBoard() {
+        director.cancel()
         // Napping? Wake up first, then bring the board.
         if nap.isActive {
             nap.openBoardAfter = true
@@ -233,6 +240,7 @@ final class BuddyStage: NSView {
 
     /// Take a nap, or wake up if already napping.
     func toggleNap() {
+        director.cancel()
         if boardOpen { closeBoard() }
         nap.toggle()
     }
@@ -382,6 +390,16 @@ final class BuddyStage: NSView {
         }
     }
 
+    /// Extras: drops in a buddy that isn't tied to a session, for an activity that needs company.
+    func summonGuest(hat: Hat) -> Buddy? {
+        guard let main else { return nil }
+        let x = min(max(main.pos.x + .random(in: 60...140) * (main.pos.x > bounds.width / 2 ? -1 : 1), 40), bounds.width - 40)
+        let guest = Buddy(stage: self, isMain: false, hat: hat, x: x, dropIn: true)
+        guest.isGuest = true
+        add(guest)
+        return guest
+    }
+
     var extraBuddyCount: Int { buddies.filter { !$0.isMain && !$0.isLeaving }.count }
 
     /// Sends every extra buddy off-screen; the main buddy stays.
@@ -426,6 +444,7 @@ final class BuddyStage: NSView {
         tickSnow(dt)
         tickBoard(dt)
         nap.tick(dt)
+        director.tick(dt)
         if !signQueue.isEmpty, let main, main.canHoldSign { main.showSign(signQueue.removeFirst()) }
 
         CATransaction.begin()
@@ -449,7 +468,7 @@ final class BuddyStage: NSView {
         guard sessionBuddies else {
             main.sessionID = nil
             main.info = aggregateProvider()
-            for b in buddies where !b.isMain { b.beginLeaving() }
+            for b in buddies where !b.isMain && !b.isGuest { b.beginLeaving() }
             return
         }
         let all = sessionsProvider()
@@ -630,7 +649,7 @@ final class BuddyStage: NSView {
         guard let b = buddies.last(where: { !$0.isLeaving && $0.hitRect.contains(p) }) else { return }
         if b.isScripted {
             // ⌥-click the napping buddy to wake it; it can't be picked up mid-routine.
-            if nap.isNapping { nap.wake() }
+            if nap.isNapping { nap.wake() } else { director.clicked(b) }
             return
         }
         grabbed = b

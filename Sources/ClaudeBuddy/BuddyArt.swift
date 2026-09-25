@@ -2,10 +2,10 @@ import AppKit
 
 /// One frame of the buddy, described by its parts. Frames are drawn on demand and cached.
 struct Pose: Hashable {
-    enum Legs: Hashable { case stand, stepA, stepB, tucked }
-    enum Eyes: Hashable { case open, closed, happy, wide, dizzy }
-    enum Arms: Hashable { case down, up, waveHigh, waveLow, typeA, typeB, hammerUp, hammerDown, holdOut }
-    enum Prop: Hashable { case none, keyboard, hammerUp, hammerDown, magnifier, antennaA, antennaB }
+    enum Legs: String, Hashable, CaseIterable { case stand, stepA, stepB, tucked }
+    enum Eyes: String, Hashable, CaseIterable { case open, closed, happy, wide, dizzy }
+    enum Arms: String, Hashable, CaseIterable { case down, up, waveHigh, waveLow, typeA, typeB, hammerUp, hammerDown, holdOut }
+    enum Prop: String, Hashable, CaseIterable { case none, keyboard, hammerUp, hammerDown, magnifier, antennaA, antennaB }
 
     var legs = Legs.stand
     var eyes = Eyes.open
@@ -18,6 +18,8 @@ struct Pose: Hashable {
     /// Landing squash: wider, shorter body.
     var squash = false
     var hat = Hat.none
+    /// Pack accessories (Extras), drawn by `AccessoryArt`. Empty for the built-in looks.
+    var accessories: [String] = []
 }
 
 /// Procedural pixel art. The buddy faces right; the scene mirrors it to face left.
@@ -36,6 +38,9 @@ enum BuddyArt {
         return i
     }
 
+    /// Packs were reloaded, so frames with accessories may look different now.
+    static func clearCache() { cache.removeAll() }
+
     static func render(_ p: Pose) -> PixelCanvas {
         var c = PixelCanvas(width: width, height: height)
         let bw = p.squash ? 14 : 12
@@ -53,6 +58,8 @@ enum BuddyArt {
                 c.fill(x0 + o, from, 1, y0 - from, Palette.body)
             }
         }
+
+        if !p.accessories.isEmpty { AccessoryArt.drawBack(p.accessories, on: &c, bodyX: x0, bodyWidth: bw, bodyY: y0, top: top) }
 
         // Body
         c.fill(x0, y0, bw, bh, Palette.body)
@@ -89,7 +96,7 @@ enum BuddyArt {
             }
         }
 
-        p.hat.draw(on: &c, left: x0 + (bw - 12) / 2, top: top)
+        if !AccessoryArt.coversHead(p.accessories) { p.hat.draw(on: &c, left: x0 + (bw - 12) / 2, top: top) }
 
         // Props
         switch p.prop {
@@ -124,6 +131,9 @@ enum BuddyArt {
                 c.set(a - 2, top + 3, Palette.signalA); c.set(a - 3, top + 4, Palette.signalA)
             }
         }
+        if !p.accessories.isEmpty {
+            AccessoryArt.drawFront(p.accessories, on: &c, bodyX: x0, bodyWidth: bw, bodyY: y0, top: top, eyeY: ey, handX: rx, handY: ay)
+        }
         return c
     }
 
@@ -138,15 +148,17 @@ enum BuddyArt {
     private static var thinkCache: [Int: CGImage] = [:]
 
     /// Thought bubble with 0–3 animated dots.
-    static func thinkBubble(dots: Int) -> CGImage {
-        if let t = thinkCache[dots] { return t }
+    /// `tailRight`: the tail points down-right, for a bubble on the buddy's left.
+    static func thinkBubble(dots: Int, tailRight: Bool = false) -> CGImage {
+        let key = dots + (tailRight ? 100 : 0)
+        if let t = thinkCache[key] { return t }
         var c = PixelCanvas(width: 14, height: 9)
         roundedBox(&c, 0, 2, 14, 7)
         for i in 0..<dots { c.fill(2 + i * 4, 4, 2, 2, Palette.body) }
-        c.set(3, 1, Palette.outline)
-        c.set(1, 0, Palette.outline)
+        c.set(tailRight ? 10 : 3, 1, Palette.outline)
+        c.set(tailRight ? 12 : 1, 0, Palette.outline)
         let i = c.cgImage()
-        thinkCache[dots] = i
+        thinkCache[key] = i
         return i
     }
 

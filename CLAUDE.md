@@ -36,4 +36,10 @@ into source, tests, fixtures, or docs. Enable the secret-blocking hook in a clon
   touching `Buddy.swift` or `BuddyStage.swift`.
 - Fake an event: `echo '{"hook_event_name":"Stop","session_id":"x"}' | curl -s --data-binary @- http://127.0.0.1:47823/claude-buddy/event`
 - Test hook editing only on a scratch file: `ClaudeBuddy --install-hooks /path/to/copy.json`.
+- Extras (packs, activities, leader key, triggers) live in `Sources/ClaudeBuddy/Extras/`; the format is documented in
+  `docs/PACKS.md`. Built-in pack content is JSON inside `Extras/BuiltInPack.swift`, and `docs/example-pack.json` must
+  match `Extras/ExamplePack.swift`. Preview an activity with `.build/debug/ClaudeBuddy --film <id> /tmp/film.png`;
+  `--check-packs` validates the user's packs folder. Extras hooks into existing code only through small seams
+  (`Buddy.ScriptPose.custom`, `scriptImage/scriptAngle`, `isGuest`, `accessories`; `BuddyStage.director`,
+  `summonGuest`; `Pose.accessories`; `EventServer.extraHandler`), so keep new behavior in the Extras folder.
 - Keep CPU around 1%: don't move the window per frame, and don't reintroduce SpriteKit (see README "Performance").

@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var schoolWindows: SchoolWindows?
     private var hotKey: HotKey?
     private var napHotKey: HotKey?
+    private var extras: ExtrasController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         if let id = Bundle.main.bundleIdentifier,
@@ -21,7 +22,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.mainMenu = AppMenu.build()  // So ⌘V/⌘C/⌘A work in the Canvas window's text fields.
         let overlay = OverlayController(settings: settings, activity: activity)
         activity.onPulse = { [weak overlay] p, session in overlay?.stage.pulse(p, session: session) }
-        server.onEvent = { [weak self] event in self?.activity.handle(event) }
+        server.onEvent = { [weak self] event in
+            self?.activity.handle(event)
+            self?.extras?.claudeEvent(event)
+        }
         server.statusProvider = { [weak overlay, weak self] in
             var status = overlay?.stage.status ?? [:]
             if let hk = self?.hotKey { status["todayShortcut"] = hk.failed ? "\(hk.registered.title) (in use by another app)" : hk.registered.title }
@@ -62,6 +66,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu = MenuController(settings: settings, activity: activity, overlay: overlay, server: server,
                               school: school, schoolWindows: windows, hotKey: hotKey, napHotKey: napHotKey)
         self.overlay = overlay
+        // Extras: pack activities, accessories, the leader key, shortcuts, and triggers.
+        let extras = ExtrasController(stage: overlay.stage)
+        extras.canPerform = { [weak settings] in settings?.visible ?? false }
+        extras.start()
+        server.extraHandler = { [weak extras] method, path, body in extras?.handle(method: method, path: path, body: body) }
+        menu?.extras = extras
+        self.extras = extras
     }
 }
 
@@ -80,6 +91,17 @@ if let file = argument(after: "--render-board") {
     let tab: Billboard.Tab = tabName == "missing" ? .missing : tabName == "grades" ? .grades : .due
     BoardPreview.render(to: URL(fileURLWithPath: file), tab: tab)
     exit(0)
+}
+if let file = argument(after: "--render-extras") {
+    ExtrasPreview.render(to: URL(fileURLWithPath: file))
+    exit(0)
+}
+if let id = argument(after: "--film"), let file = argument(after: id) {
+    ExtrasPreview.film(id, to: URL(fileURLWithPath: file))
+    exit(0)
+}
+if args.contains("--check-packs") {
+    exit(ExtrasPreview.checkPacks())
 }
 if args.contains("--self-test") {
     exit(SelfTest.run())

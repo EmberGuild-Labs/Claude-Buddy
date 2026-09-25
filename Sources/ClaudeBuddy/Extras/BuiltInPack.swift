@@ -1,0 +1,3881 @@
+import Foundation
+
+/// The pack that ships with the app: tricks, a few accessories, and routines with props
+/// (camping, fishing, the seesaw) that double as worked examples of the pack format.
+/// Edit it like any pack; `--self-test` runs every activity in it.
+enum BuiltInPack {
+    static func load() -> Pack {
+        PackParser.parse(data: Data(json.utf8), file: nil, fallbackID: "builtin")
+    }
+
+    static let json = #"""
+{
+  "id": "builtin",
+  "name": "Built-in",
+  "palette": {
+    "D": "#6B4A2A",
+    "T": "#E8A33D",
+    "S": "#F2C46B",
+    "K": "#2B1B16",
+    "R": "#D63B3B",
+    "r": "#A82A2A",
+    "G": "#8A8F99",
+    "W": "#8A5A2E",
+    "w": "#5A3A1E",
+    "O": "#FF8A1F",
+    "Y": "#FFD447",
+    "B": "#4A90D9",
+    "b": "#7DB8F0",
+    "L": "#BFE8FF",
+    "N": "#5A3A1E",
+    "E": "#2B1B16",
+    "d": "#B65E42",
+    "g": "#4A4F5C",
+    "q": "#6A7080",
+    "Q": "#9AA0AC",
+    "k": "#23252B",
+    "V": "#3BA55C",
+    "C": "#6B3E1E",
+    "M": "#F4F1EA",
+    "X": "#D9B07A",
+    "x": "#A67C4A"
+  },
+  "art": {
+    "tent": {
+      "frames": {
+        "closed": [
+          ".............D.............",
+          ".............D.............",
+          "............DTD............",
+          "...........DSTSD...........",
+          "..........DTTTTTD..........",
+          ".........DTTTTTTTD.........",
+          "........DTTTTDTTTTD........",
+          ".......DSTSTDDDTSTSD.......",
+          "......DTTTTTDDDTTTTTD......",
+          ".....DTTTTTDTDTDTTTTTD.....",
+          "....DTTTTTTDTDTDTTTTTTD....",
+          "....DTSTSTDTTDTTDTSTSTD....",
+          "...DTTTTTTDTTDTTDTTTTTTD...",
+          "..DTTTTTTDTTTDTTTDTTTTTTD..",
+          ".DTTTTTTTDTTTDTTTDTTTTTTTD.",
+          "DTSTSTSTDTTTTDTTTTDTSTSTSTD"
+        ],
+        "open": [
+          ".............D.............",
+          ".............D.............",
+          "............DTD............",
+          "...........DSTSD...........",
+          "..........DTTTTTD..........",
+          ".........DTTTTTTTD.........",
+          "........DTTTTKTTTTD........",
+          ".......DSTSTKKKTSTSD.......",
+          "......DTTTTTKKKTTTTTD......",
+          ".....DTTTTTKKKKKTTTTTD.....",
+          "....DTTTTTTKKKKKTTTTTTD....",
+          "....DTSTSTKKKKKKKTSTSTD....",
+          "...DTTTTTTKKKKKKKTTTTTTD...",
+          "..DTTTTTTKKKKKKKKKTTTTTTD..",
+          ".DTTTTTTTKKKKKKKKKTTTTTTTD.",
+          "DTSTSTSTKKKKKKKKKKKTSTSTSTD"
+        ]
+      },
+      "frame": "closed"
+    },
+    "wagon": {
+      "frames": {
+        "logs": [
+          "....................",
+          "...wWWWWWWWWWw......",
+          ".WWWWwWWWWwWWWWw....",
+          ".wWWWWwWWWWwWWWW...K",
+          "rrrrrrrrrrrrrrrrr..K",
+          "RRRRRRRRRRRRRRRRR.K.",
+          "RrrrrrrrrrrrrrrrRK..",
+          "RRRRRRRRRRRRRRRRR...",
+          "..KGK.......KGK.....",
+          "..KKK.......KKK....."
+        ],
+        "empty": [
+          "....................",
+          "....................",
+          "....................",
+          "...................K",
+          "rrrrrrrrrrrrrrrrr..K",
+          "RRRRRRRRRRRRRRRRR.K.",
+          "RrrrrrrrrrrrrrrrRK..",
+          "RRRRRRRRRRRRRRRRR...",
+          "..KGK.......KGK.....",
+          "..KKK.......KKK....."
+        ]
+      },
+      "frame": "logs"
+    },
+    "campfire": {
+      "frames": {
+        "a": [
+          "..............",
+          ".......O......",
+          "......OO......",
+          ".....OOO......",
+          ".....OOOO.....",
+          "....OOYYOO....",
+          "....OOYYOO....",
+          "...OOYYYYOO...",
+          "...OOYYYYOO...",
+          "...wwwwwwww...",
+          "GWWWWWWWWWWWWG",
+          "GwWWWWWWWWWWwG"
+        ],
+        "b": [
+          "..............",
+          ".....O........",
+          "......O.......",
+          "......OOO.....",
+          "......OOO.....",
+          ".....OOYOO....",
+          "....OOYYOO....",
+          "....OOYYYOO...",
+          "...OOYYYYOO...",
+          "...wwwwwwww...",
+          "GWWWWWWWWWWWWG",
+          "GwWWWWWWWWWWwG"
+        ]
+      },
+      "frame": "a"
+    },
+    "pond": {
+      "frames": {
+        "a": [
+          "....bbbbbbbbbbbbbbbbbbbbbbbb....",
+          ".BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB.",
+          "BBBBBBLLBBBBLLBBBBLLBBBBLLBBBBBB",
+          ".BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB.",
+          "....BBBBBBBBBBBBBBBBBBBBBBBB...."
+        ],
+        "b": [
+          "....bbbbbbbbbbbbbbbbbbbbbbbb....",
+          ".BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB.",
+          "BBBBBBBBLLBBBBLLBBBBLLBBBBLLBBBB",
+          ".BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB.",
+          "....BBBBBBBBBBBBBBBBBBBBBBBB...."
+        ]
+      },
+      "frame": "a"
+    },
+    "fish": {
+      "rows": [
+        "..OOO...",
+        ".OOOOO.O",
+        "OKOOOOOO",
+        ".OOOOO.O",
+        "..OOO..."
+      ]
+    },
+    "boot": {
+      "rows": [
+        "..NN..",
+        "..NN..",
+        "..NN..",
+        "..NNNN",
+        "NNNNNN",
+        "NNNNNN"
+      ]
+    },
+    "seesaw": {
+      "frames": {
+        "flat": [
+          "............................................",
+          "............................................",
+          "...K....................................K...",
+          "...K....................................K...",
+          "wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww",
+          "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+          ".....................GG.....................",
+          "....................GGGG....................",
+          "...................GGGGGG...................",
+          "..................GGGGGGGG..................",
+          ".................GGGGGGGGGG................."
+        ],
+        "left": [
+          "........................................K...",
+          "........................................wwww",
+          ".................................wwwwwwwWWWW",
+          "..........................wwwwwwwWWWWWWW....",
+          "..................wwwwwwwwWWWWWWW...........",
+          "...K.......wwwwwwwWWWWWWWW..................",
+          "...KwwwwwwwWWWWWWW...GG.....................",
+          "wwwwWWWWWWW.........GGGG....................",
+          "WWWW...............GGGGGG...................",
+          "..................GGGGGGGG..................",
+          ".................GGGGGGGGGG................."
+        ],
+        "right": [
+          "...K........................................",
+          "wwww........................................",
+          "WWWWwwwwwww.................................",
+          "....WWWWWWWwwwwwww..........................",
+          "...........WWWWWWWwwwwwwww..................",
+          "..................WWWWWWWWwwwwwww.......K...",
+          ".....................GG...WWWWWWWwwwwwwwK...",
+          "....................GGGG.........WWWWWWWwwww",
+          "...................GGGGGG...............WWWW",
+          "..................GGGGGGGG..................",
+          ".................GGGGGGGGGG................."
+        ]
+      },
+      "frame": "flat"
+    },
+    "ball": {
+      "rows": [
+        "..BBBB..",
+        ".BBBBBB.",
+        "BBBEBBEB",
+        "BBBEBBEB",
+        "BBBBBBBB",
+        "dBBBBBBd",
+        ".dBBBBd.",
+        "..dddd.."
+      ],
+      "colors": {
+        "B": "body",
+        "d": "bodyDark"
+      }
+    },
+    "loot": {
+      "frame": "doc",
+      "colors": {
+        "P": "#F4F1EA",
+        "p": "#C9C3B4",
+        "l": "#8A8F99",
+        "F": "#5B9BE8",
+        "f": "#3F78C8",
+        "S": "#8FD0FF",
+        "m": "#3BA55C",
+        "y": "#FFD447",
+        "k": "#2B1B16"
+      },
+      "frames": {
+        "doc": [
+          "PPPPP..",
+          "PPPPPp.",
+          "PlllPPp",
+          "PPPPPPP",
+          "PllllPP",
+          "PPPPPPP",
+          "PlllllP",
+          "PPPPPPP",
+          "ppppppp"
+        ],
+        "folder": [
+          "ffff......",
+          "FFFFffffff",
+          "FFFFFFFFFF",
+          "FFFFFFFFFF",
+          "FFFFFFFFFF",
+          "FFFFFFFFFF",
+          "FFFFFFFFFF",
+          "ffffffffff"
+        ],
+        "photo": [
+          "kkkkkkkkk",
+          "kSSSSySSk",
+          "kSSSSSSSk",
+          "kSSmSSSSk",
+          "kSmmmSmSk",
+          "kmmmmmmmk",
+          "kkkkkkkkk"
+        ]
+      }
+    },
+    "tag": {
+      "frames": {
+        "p1": [
+          ".......KKK.........................",
+          ".......KPP.........................",
+          ".......KPK.........................",
+          ".......KPP.........................",
+          ".......KPK.........................",
+          ".......KPP.........................",
+          ".......KKK.........................",
+          ".KKKKKKKK..........................",
+          ".KPKPKKPKK.........................",
+          ".KPKPKPKPK.........................",
+          ".KPKPKPPPK.........................",
+          ".KPPPKPKPK.........................",
+          ".KPKPKPKPK.........................",
+          ".KKPKKKKKP.........................",
+          "..KPK...KP.........................",
+          "..KPK...KK.........................",
+          "..KKK.............................."
+        ],
+        "p2": [
+          ".......KKKKKKKKKKKK................",
+          ".......KPPKKPKPKPPK................",
+          ".......KPKPKPKPKPKP................",
+          ".......KPPKKPKPKPKP................",
+          ".......KPKPKPKPKPKP................",
+          ".......KPPKKPPPKPPK................",
+          ".......KKKKKKKKKKKK................",
+          ".KKKKKKKK.KKKK...KK................",
+          ".KPKPKKPKKKPPK...KP................",
+          ".KPKPKPKPKPKKK...KP................",
+          ".KPKPKPPPKKPKK...KP................",
+          ".KPPPKPKPKKKPK...KP................",
+          ".KPKPKPKPKPPKK.KKKP................",
+          ".KKPKKKKKPKKK..KPKK................",
+          "..KPK...KPK....KPK.................",
+          "..KPK...KKK....KPK.................",
+          "..KKK..........KPK................."
+        ],
+        "p3": [
+          ".......KKKKKKKKKKKKKKKKKKKKK.......",
+          ".......KPPKKPKPKPPKKPPKKPKPK.......",
+          ".......KPKPKPKPKPKPKPKPKPKPK.......",
+          ".......KPPKKPKPKPKPKPKPKKPKH.......",
+          ".......KPKPKPKPKPKPKPKPKKPKK.......",
+          ".......KPPKKPPPKPPKKPPKKKPKK.......",
+          ".......KKKKKKKKKKKKKKKK.KKK........",
+          ".KKKKKKKK.KKKK...KKKKKKKKKKK.......",
+          ".KPKPKKPKKKPPK...KPKPKPPPKPP.......",
+          ".KPKPKPKPKPKKK...KPKPKPKKKPK.......",
+          ".KPKPKPPPKKPKK...KPPPKPPKKPP.......",
+          ".KPPPKPKPKKKPK...KPKPKPKKKPK.......",
+          ".KPKPKPKPKPPKK.KKKPKPKPPPKPK.......",
+          ".KKPKKKKKPKKK..KPKKKKKKKPKKK.......",
+          "..KPK...KPK....KPK.....KPK.........",
+          "..KPK...KKK....KPK.....KKK.........",
+          "..KKK..........KPK................."
+        ],
+        "p4": [
+          ".......KKKKKKKKKKKKKKKKKKKKK.......",
+          ".......KPPKKPKPKPPKKPPKKPKPKKKKK...",
+          ".......KPKPKPKPKPKPKPKPKPKPKHKHKK..",
+          ".......KPPKKPKPKPKPKPKPKKPKHHHHHK..",
+          ".......KPKPKPKPKPKPKPKPKKPKKHHHKK..",
+          ".......KPPKKPPPKPPKKPPKKKPKKKHKK...",
+          ".......KKKKKKKKKKKKKKKK.KKK.KKK....",
+          ".KKKKKKKK.KKKK...KKKKKKKKKKKKKKKKK.",
+          ".KPKPKKPKKKPPK...KPKPKPPPKPPKKPPPK.",
+          ".KPKPKPKPKPKKK...KPKPKPKKKPKPKPKKK.",
+          ".KPKPKPPPKKPKK...KPPPKPPKKPPKKPPK..",
+          ".KPPPKPKPKKKPK...KPKPKPKKKPKPKPKKK.",
+          ".KPKPKPKPKPPKK.KKKPKPKPPPKPKPKPPPK.",
+          ".KKPKKKKKPKKK..KPKKKKKKKPKKKKKKPKK.",
+          "..KPK...KPK....KPK.....KPK....KPK..",
+          "..KPK...KKK....KPK.....KKK....KPK..",
+          "..KKK..........KPK............KKK.."
+        ]
+      },
+      "frame": "p4",
+      "colors": {
+        "P": "#FF4FA3",
+        "H": "#5CE1FF",
+        "K": "#1E1E24"
+      }
+    },
+    "paper": {
+      "frames": {
+        "sheet": [
+          "WWWWW",
+          "WllWW",
+          "WWWWW",
+          "WlllW",
+          "WWWWW",
+          "WllWW",
+          "WWWWW"
+        ],
+        "level": [
+          "W.......",
+          "WW......",
+          "WWWWWWWW",
+          ".lWWWWW.",
+          "..lW...."
+        ],
+        "up": [
+          ".......W",
+          "......WW",
+          "....WWW.",
+          "..WWWW..",
+          "WWWl....",
+          "Wl......"
+        ],
+        "down": [
+          "Wl......",
+          "WWWl....",
+          "..WWWW..",
+          "....WWW.",
+          "......WW",
+          ".......W"
+        ]
+      },
+      "frame": "sheet",
+      "colors": {
+        "W": "white",
+        "l": "#9AA0AC"
+      }
+    },
+    "spray-dot": {
+      "rows": [
+        "P"
+      ],
+      "colors": {
+        "P": "#FF4FA3"
+      }
+    },
+    "coffee-machine": {
+      "frames": {
+        "idle": [
+          "gQQQQQQQQQQQQg",
+          "gqqqqqqqqqqqqg",
+          "gqqkkkkkqqRRqg",
+          "gqqkkkkkqqqqqg",
+          "gqqqqqqqqqqqqg",
+          "gqqqqqqqqqqqqg",
+          "gggggggggggggg",
+          ".gg...kk...gg.",
+          ".gg........gg.",
+          ".gg........gg.",
+          ".gg........gg.",
+          ".gg........gg.",
+          ".gg........gg.",
+          ".gg........gg.",
+          ".gg........gg.",
+          ".gg........gg.",
+          ".gg........gg.",
+          ".gg.kkkkkk.gg.",
+          "kkkkkkkkkkkkkk",
+          "kkkkkkkkkkkkkk"
+        ],
+        "brewing": [
+          "gQQQQQQQQQQQQg",
+          "gqqqqqqqqqqqqg",
+          "gqqkkkkkqqVVqg",
+          "gqqkkkkkqqqqqg",
+          "gqqqqqqqqqqqqg",
+          "gqqqqqqqqqqqqg",
+          "gggggggggggggg",
+          ".gg...kk...gg.",
+          ".gg...C....gg.",
+          ".gg...C....gg.",
+          ".gg...C....gg.",
+          ".gg...C....gg.",
+          ".gg...C....gg.",
+          ".gg...C....gg.",
+          ".gg...C....gg.",
+          ".gg.MCCCCM.gg.",
+          ".gg.MMMMMM.gg.",
+          ".gg.MMMMMM.gg.",
+          "kkkkkkkkkkkkkk",
+          "kkkkkkkkkkkkkk"
+        ]
+      },
+      "frame": "idle"
+    },
+    "steam": {
+      "rows": [
+        ".W.",
+        "W..",
+        ".W.",
+        "..W",
+        ".W."
+      ],
+      "colors": {
+        "W": "#E8E8F0"
+      }
+    },
+    "pizza-box": {
+      "frames": {
+        "closed": [
+          "......................",
+          "......................",
+          "......................",
+          "......................",
+          "......................",
+          "......................",
+          "......................",
+          "......................",
+          "......................",
+          "......................",
+          "xxxxxxxxxxxxxxxxxxxxxx",
+          "XXXXXXXXRRYRRRXXXXXXXX",
+          "XXXXXXXXRRRRYRXXXXXXXX",
+          "xxxxxxxxxxxxxxxxxxxxxx"
+        ],
+        "open": [
+          "xXX...................",
+          "xxX...................",
+          "xxX...................",
+          "xxX...................",
+          "xxX...................",
+          "xxX...................",
+          "xxX...................",
+          "xxX...................",
+          "xxX...................",
+          "xx.OYRYYYRYYYRYYYRYYO.",
+          "xxxOOOOROOOROOOROOOOOx",
+          "XXXXXXXXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXXXXXXXX",
+          "xxxxxxxxxxxxxxxxxxxxxx"
+        ],
+        "empty": [
+          "xXX...................",
+          "xxX...................",
+          "xxX...................",
+          "xxX...................",
+          "xxX...................",
+          "xxX...................",
+          "xxX...................",
+          "xxX...................",
+          "xxX...................",
+          "xx....................",
+          "xxxxxOxxxxOxxRxxOxxxxx",
+          "XXXXXXXXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXXXXXXXX",
+          "xxxxxxxxxxxxxxxxxxxxxx"
+        ]
+      },
+      "frame": "closed"
+    }
+  },
+  "accessories": {
+    "wizard-hat": {
+      "title": "Wizard Hat",
+      "slot": "head",
+      "colors": {
+        "P": "#6B3FA0",
+        "p": "#4A2A78",
+        "Y": "gold"
+      },
+      "rows": [
+        "......P.....",
+        ".....PPP....",
+        ".....PYP....",
+        "....PPPPP...",
+        "...PPPPPPP..",
+        "..PPPPPPPPP.",
+        "pppppppppppp"
+      ]
+    },
+    "chef-hat": {
+      "title": "Chef Hat",
+      "slot": "head",
+      "colors": {
+        "C": "white",
+        "c": "#E2DCCD"
+      },
+      "rows": [
+        ".CC.CC.CC.",
+        "CCCCCCCCCC",
+        "CCCCCCCCCC",
+        ".CCCCCCCC.",
+        "..cccccc.."
+      ]
+    },
+    "headphones": {
+      "title": "Headphones",
+      "slot": "head",
+      "offset": [
+        0,
+        -4
+      ],
+      "colors": {
+        "H": "#3C3F4A",
+        "R": "red"
+      },
+      "rows": [
+        "..HHHHHHHHHH..",
+        ".H..........H.",
+        ".H..........H.",
+        "RR..........RR",
+        "RR..........RR",
+        "RR..........RR"
+      ]
+    },
+    "sunglasses": {
+      "title": "Sunglasses",
+      "slot": "face",
+      "colors": {
+        "K": "#1E1E24",
+        "g": "#6A7A8C"
+      },
+      "rows": [
+        ".KKKK..KKKK.",
+        ".KgKKKKKgKK.",
+        "..KK....KK.."
+      ]
+    },
+    "bowtie": {
+      "title": "Bow Tie",
+      "slot": "body",
+      "offset": [
+        0,
+        1
+      ],
+      "colors": {
+        "R": "red",
+        "r": "#A82A2A"
+      },
+      "rows": [
+        "R...R",
+        "RRrRR",
+        "R...R"
+      ]
+    },
+    "cape": {
+      "title": "Hero Cape",
+      "slot": "back",
+      "offset": [
+        -7,
+        -1
+      ],
+      "colors": {
+        "R": "red",
+        "r": "#A82A2A"
+      },
+      "rows": [
+        "....RR",
+        "...RRR",
+        "..RRRR",
+        ".RRRRR",
+        ".RRRRr",
+        "RRRRRr",
+        "RRRRr.",
+        "RRr..."
+      ]
+    },
+    "fishing-rod": {
+      "title": "Fishing Rod",
+      "slot": "held",
+      "colors": {
+        "B": "#7A4B24",
+        "W": "#D6D8DE",
+        "R": "red"
+      },
+      "rows": [
+        "......BW",
+        ".....B.W",
+        ".....B.W",
+        "....B..W",
+        "...B...R",
+        "...B....",
+        "..B.....",
+        ".B......",
+        ".B......",
+        "B......."
+      ]
+    },
+    "marshmallow": {
+      "title": "Marshmallow Stick",
+      "slot": "held",
+      "colors": {
+        "B": "#7A4B24",
+        "M": "#F4F1EA"
+      },
+      "rows": [
+        "......MM",
+        "......MM",
+        ".....B..",
+        "....B...",
+        "...B....",
+        "..B.....",
+        ".B......",
+        "B......."
+      ]
+    },
+    "mug": {
+      "title": "Coffee Mug",
+      "slot": "held",
+      "offset": [
+        1,
+        0
+      ],
+      "colors": {
+        "M": "#D94F3D",
+        "m": "#A83A2C",
+        "C": "#6B3E1E"
+      },
+      "rows": [
+        "MCCM..",
+        "MMMMMM",
+        "MMMM.M",
+        "MMMMMM",
+        "mmmm.."
+      ]
+    },
+    "phone": {
+      "title": "Phone",
+      "slot": "held",
+      "offset": [
+        1,
+        0
+      ],
+      "colors": {
+        "K": "#23252B",
+        "S": "#8FD0FF"
+      },
+      "rows": [
+        "KKKK",
+        "KSSK",
+        "KSSK",
+        "KSSK",
+        "KKKK"
+      ]
+    },
+    "spray-can": {
+      "title": "Spray Can",
+      "slot": "held",
+      "offset": [
+        1,
+        0
+      ],
+      "colors": {
+        "C": "#3BA55C",
+        "c": "#2A7A42",
+        "N": "#D6D8DE",
+        "P": "#FF4FA3"
+      },
+      "rows": [
+        ".P.",
+        ".N.",
+        "CCC",
+        "CcC",
+        "CCC",
+        "CcC",
+        "CCC"
+      ]
+    },
+    "sponge": {
+      "title": "Sponge",
+      "slot": "held",
+      "offset": [
+        1,
+        0
+      ],
+      "colors": {
+        "Y": "#FFD447",
+        "y": "#D9A92E",
+        "G": "#3BA55C"
+      },
+      "rows": [
+        "GGGG",
+        "YyYY",
+        "YYyY",
+        "YYYY"
+      ]
+    },
+    "pizza-slice": {
+      "title": "Pizza Slice",
+      "slot": "held",
+      "offset": [
+        1,
+        1
+      ],
+      "colors": {
+        "c": "#C98A3E",
+        "Y": "#FFD447",
+        "R": "#D63B3B"
+      },
+      "rows": [
+        "ccccc",
+        "YRYYY",
+        ".YYR.",
+        "..Y.."
+      ]
+    }
+  },
+  "clips": {
+    "backflip": {
+      "tween": true,
+      "frames": [
+        {
+          "squash": true,
+          "time": 0.12
+        },
+        {
+          "dy": 7,
+          "angle": -90,
+          "arms": "up",
+          "eyes": "wide",
+          "legs": "tucked",
+          "time": 0.1
+        },
+        {
+          "dy": 11,
+          "angle": -180,
+          "arms": "up",
+          "eyes": "wide",
+          "legs": "tucked",
+          "time": 0.1
+        },
+        {
+          "dy": 7,
+          "angle": -270,
+          "arms": "up",
+          "eyes": "wide",
+          "legs": "tucked",
+          "time": 0.1
+        },
+        {
+          "dy": 0,
+          "angle": -360,
+          "time": 0.06
+        },
+        {
+          "squash": true,
+          "angle": 0,
+          "time": 0.1
+        },
+        {
+          "pose": "cheer",
+          "time": 0.4,
+          "effect": "sparkle"
+        }
+      ]
+    },
+    "cartwheel": {
+      "tween": true,
+      "frames": [
+        {
+          "angle": 0,
+          "arms": "up",
+          "time": 0.12
+        },
+        {
+          "angle": 90,
+          "arms": "up",
+          "dy": 3,
+          "time": 0.12
+        },
+        {
+          "angle": 180,
+          "arms": "up",
+          "dy": 4,
+          "time": 0.12
+        },
+        {
+          "angle": 270,
+          "arms": "up",
+          "dy": 3,
+          "time": 0.12
+        },
+        {
+          "angle": 360,
+          "arms": "up",
+          "time": 0.02
+        },
+        {
+          "pose": "cheer",
+          "angle": 0,
+          "time": 0.35
+        }
+      ]
+    },
+    "bow": {
+      "tween": true,
+      "frames": [
+        {
+          "angle": 0,
+          "time": 0.25
+        },
+        {
+          "angle": 35,
+          "eyes": "closed",
+          "arms": "down",
+          "time": 0.6
+        },
+        {
+          "angle": 35,
+          "eyes": "closed",
+          "time": 0.05
+        },
+        {
+          "angle": 0,
+          "eyes": "happy",
+          "time": 0.4
+        }
+      ]
+    },
+    "wave": {
+      "frames": [
+        {
+          "arms": "waveHigh",
+          "eyes": "happy"
+        },
+        {
+          "arms": "waveLow",
+          "eyes": "happy"
+        },
+        {
+          "arms": "waveHigh",
+          "eyes": "happy"
+        },
+        {
+          "arms": "waveLow",
+          "eyes": "happy"
+        },
+        {
+          "arms": "waveHigh",
+          "eyes": "happy"
+        },
+        {
+          "arms": "waveLow",
+          "eyes": "happy"
+        },
+        {
+          "arms": "waveHigh",
+          "eyes": "happy"
+        },
+        {
+          "arms": "waveLow",
+          "eyes": "happy"
+        }
+      ],
+      "frameTime": 0.18
+    },
+    "robot": {
+      "loop": true,
+      "frameTime": 0.22,
+      "frames": [
+        {
+          "arms": "up",
+          "look": 1
+        },
+        {
+          "arms": "holdOut",
+          "bob": 1
+        },
+        {
+          "arms": "down",
+          "look": -1
+        },
+        {
+          "arms": "typeA",
+          "bob": 1
+        },
+        {
+          "arms": "waveHigh",
+          "eyes": "happy"
+        },
+        {
+          "arms": "down",
+          "bob": 1,
+          "effect": "notes"
+        }
+      ]
+    },
+    "cast": {
+      "frames": [
+        {
+          "arms": "hammerUp",
+          "eyes": "wide",
+          "time": 0.35
+        },
+        {
+          "arms": "holdOut",
+          "time": 0.25
+        },
+        {
+          "arms": "holdOut",
+          "eyes": "happy",
+          "time": 0.4
+        }
+      ]
+    },
+    "reel": {
+      "loop": true,
+      "frameTime": 0.12,
+      "frames": [
+        {
+          "arms": "typeA",
+          "eyes": "wide"
+        },
+        {
+          "arms": "typeB",
+          "eyes": "wide"
+        }
+      ]
+    },
+    "stretch": {
+      "tween": true,
+      "frames": [
+        {
+          "arms": "up",
+          "eyes": "closed",
+          "dy": 0,
+          "time": 0.6
+        },
+        {
+          "arms": "up",
+          "eyes": "closed",
+          "dy": 2,
+          "time": 0.8
+        },
+        {
+          "arms": "up",
+          "eyes": "closed",
+          "dy": 2,
+          "angle": 10,
+          "time": 0.5
+        },
+        {
+          "arms": "up",
+          "eyes": "closed",
+          "dy": 2,
+          "angle": -10,
+          "time": 0.6
+        },
+        {
+          "arms": "down",
+          "eyes": "happy",
+          "dy": 0,
+          "angle": 0,
+          "time": 0.5
+        }
+      ]
+    },
+    "roll": {
+      "loop": true,
+      "tween": true,
+      "frames": [
+        {
+          "art": "ball",
+          "angle": 0,
+          "time": 0.2
+        },
+        {
+          "art": "ball",
+          "angle": 90,
+          "time": 0.2
+        },
+        {
+          "art": "ball",
+          "angle": 180,
+          "time": 0.2
+        },
+        {
+          "art": "ball",
+          "angle": 270,
+          "time": 0.2
+        }
+      ]
+    },
+    "handshake": {
+      "frames": [
+        {
+          "arms": "holdOut",
+          "time": 0.4
+        },
+        {
+          "arms": "typeA",
+          "time": 0.15
+        },
+        {
+          "arms": "typeB",
+          "time": 0.15
+        },
+        {
+          "arms": "typeA",
+          "time": 0.15
+        },
+        {
+          "arms": "typeB",
+          "time": 0.15
+        },
+        {
+          "arms": "waveHigh",
+          "eyes": "happy",
+          "time": 0.3
+        },
+        {
+          "arms": "up",
+          "eyes": "happy",
+          "dy": 3,
+          "time": 0.2
+        },
+        {
+          "pose": "cheer",
+          "time": 0.3
+        }
+      ]
+    },
+    "sip": {
+      "tween": true,
+      "frames": [
+        {
+          "eyes": "closed",
+          "angle": 0,
+          "time": 0.2
+        },
+        {
+          "eyes": "closed",
+          "angle": -10,
+          "time": 0.6
+        },
+        {
+          "eyes": "closed",
+          "angle": -10,
+          "time": 0.2
+        },
+        {
+          "eyes": "happy",
+          "angle": 0,
+          "time": 0.5
+        }
+      ]
+    },
+    "jitter": {
+      "loop": true,
+      "frames": [
+        {
+          "dx": -1,
+          "eyes": "wide",
+          "arms": "up",
+          "time": 0.05
+        },
+        {
+          "dx": 1,
+          "eyes": "wide",
+          "arms": "up",
+          "time": 0.05
+        }
+      ]
+    },
+    "sneak": {
+      "loop": true,
+      "frames": [
+        {
+          "legs": "stepA",
+          "eyes": "wide",
+          "look": -1,
+          "time": 0.3
+        },
+        {
+          "legs": "stand",
+          "eyes": "wide",
+          "look": 1,
+          "time": 0.3
+        },
+        {
+          "legs": "stepB",
+          "eyes": "wide",
+          "look": -1,
+          "time": 0.3
+        },
+        {
+          "legs": "stand",
+          "eyes": "wide",
+          "look": 1,
+          "time": 0.3
+        }
+      ]
+    },
+    "buzz": {
+      "frames": [
+        {
+          "dx": -1,
+          "eyes": "wide",
+          "arms": "holdOut",
+          "time": 0.05
+        },
+        {
+          "dx": 1,
+          "eyes": "wide",
+          "arms": "holdOut",
+          "time": 0.05
+        },
+        {
+          "dx": -1,
+          "eyes": "wide",
+          "arms": "holdOut",
+          "time": 0.05
+        },
+        {
+          "dx": 1,
+          "eyes": "wide",
+          "arms": "holdOut",
+          "time": 0.05
+        },
+        {
+          "dx": -1,
+          "eyes": "wide",
+          "arms": "holdOut",
+          "time": 0.05
+        },
+        {
+          "dx": 1,
+          "eyes": "wide",
+          "arms": "holdOut",
+          "time": 0.05
+        },
+        {
+          "dx": -1,
+          "eyes": "wide",
+          "arms": "holdOut",
+          "time": 0.05
+        },
+        {
+          "dx": 1,
+          "eyes": "wide",
+          "arms": "holdOut",
+          "time": 0.05
+        },
+        {
+          "eyes": "happy",
+          "arms": "holdOut",
+          "time": 0.3
+        }
+      ]
+    },
+    "wobble": {
+      "loop": true,
+      "tween": true,
+      "frames": [
+        {
+          "angle": 12,
+          "arms": "waveHigh",
+          "eyes": "wide",
+          "time": 0.18
+        },
+        {
+          "angle": -6,
+          "arms": "up",
+          "eyes": "wide",
+          "time": 0.18
+        },
+        {
+          "angle": 16,
+          "arms": "waveLow",
+          "eyes": "wide",
+          "time": 0.18
+        },
+        {
+          "angle": -4,
+          "arms": "up",
+          "eyes": "wide",
+          "time": 0.18
+        }
+      ]
+    },
+    "dangle": {
+      "loop": true,
+      "tween": true,
+      "frames": [
+        {
+          "angle": 6,
+          "arms": "waveHigh",
+          "eyes": "wide",
+          "legs": "stepA",
+          "time": 0.4
+        },
+        {
+          "angle": -6,
+          "arms": "waveHigh",
+          "eyes": "wide",
+          "legs": "stepB",
+          "time": 0.4
+        }
+      ]
+    },
+    "spray": {
+      "loop": true,
+      "frames": [
+        {
+          "arms": "holdOut",
+          "eyes": "happy",
+          "time": 0.12
+        },
+        {
+          "arms": "typeA",
+          "eyes": "happy",
+          "bob": 1,
+          "time": 0.12
+        }
+      ]
+    },
+    "scrub": {
+      "loop": true,
+      "frames": [
+        {
+          "arms": "typeA",
+          "eyes": "wide",
+          "dx": -1,
+          "time": 0.08
+        },
+        {
+          "arms": "typeB",
+          "eyes": "wide",
+          "dx": 1,
+          "time": 0.08
+        }
+      ]
+    },
+    "fold": {
+      "frames": [
+        {
+          "legs": "tucked",
+          "arms": "typeA",
+          "time": 0.25
+        },
+        {
+          "legs": "tucked",
+          "arms": "typeB",
+          "time": 0.25
+        },
+        {
+          "legs": "tucked",
+          "arms": "typeA",
+          "time": 0.25
+        },
+        {
+          "legs": "tucked",
+          "arms": "typeB",
+          "time": 0.25
+        },
+        {
+          "legs": "tucked",
+          "arms": "typeA",
+          "time": 0.25
+        },
+        {
+          "legs": "tucked",
+          "arms": "typeB",
+          "time": 0.25
+        }
+      ]
+    },
+    "throw": {
+      "frames": [
+        {
+          "arms": "hammerUp",
+          "eyes": "wide",
+          "time": 0.25
+        },
+        {
+          "arms": "holdOut",
+          "eyes": "happy",
+          "time": 0.3
+        }
+      ]
+    },
+    "munch": {
+      "frames": [
+        {
+          "eyes": "happy",
+          "bob": 1,
+          "time": 0.2
+        },
+        {
+          "eyes": "closed",
+          "time": 0.2
+        },
+        {
+          "eyes": "happy",
+          "bob": 1,
+          "time": 0.2
+        },
+        {
+          "eyes": "closed",
+          "time": 0.2
+        },
+        {
+          "eyes": "happy",
+          "bob": 1,
+          "time": 0.2
+        },
+        {
+          "eyes": "closed",
+          "time": 0.2
+        }
+      ]
+    }
+  },
+  "activities": {
+    "backflip": {
+      "title": "Backflip",
+      "steps": [
+        {
+          "play": "backflip"
+        }
+      ]
+    },
+    "cartwheel": {
+      "title": "Cartwheel",
+      "steps": [
+        {
+          "play": "cartwheel"
+        },
+        {
+          "play": "cartwheel"
+        }
+      ]
+    },
+    "bow": {
+      "title": "Take a Bow",
+      "steps": [
+        {
+          "face": "cursor"
+        },
+        {
+          "play": "bow"
+        },
+        {
+          "effect": "hearts",
+          "count": 2
+        }
+      ]
+    },
+    "wave": {
+      "title": "Wave",
+      "endWith": "none",
+      "steps": [
+        {
+          "face": "cursor"
+        },
+        {
+          "play": "wave"
+        }
+      ]
+    },
+    "moonwalk": {
+      "title": "Moonwalk",
+      "steps": [
+        {
+          "face": "right"
+        },
+        {
+          "walk": "here-50",
+          "speed": 22,
+          "backwards": true
+        },
+        {
+          "play": "backflip"
+        },
+        {
+          "face": "left"
+        },
+        {
+          "walk": "here+50",
+          "speed": 22,
+          "backwards": true
+        }
+      ]
+    },
+    "robot-dance": {
+      "title": "Robot Dance",
+      "steps": [
+        {
+          "play": "robot"
+        },
+        {
+          "wait": 4
+        },
+        {
+          "stop": true
+        },
+        {
+          "play": "backflip"
+        }
+      ]
+    },
+    "roll": {
+      "title": "Roll Around",
+      "steps": [
+        {
+          "walk": "here+60",
+          "speed": 55,
+          "clip": "roll"
+        },
+        {
+          "walk": "here-60",
+          "speed": 55,
+          "clip": "roll"
+        },
+        {
+          "effect": "stars",
+          "count": 6
+        },
+        {
+          "pose": "dizzy"
+        },
+        {
+          "wait": 1
+        }
+      ]
+    },
+    "stretch": {
+      "title": "Stretch Break",
+      "steps": [
+        {
+          "say": "Stretch break!",
+          "time": 1.5
+        },
+        {
+          "play": "stretch"
+        },
+        {
+          "play": "stretch"
+        },
+        {
+          "say": "Ahh, much better.",
+          "time": 1.6
+        }
+      ]
+    },
+    "fishing": {
+      "title": "Go Fishing",
+      "props": {
+        "pond": {
+          "art": "pond",
+          "z": "back"
+        },
+        "fish": {
+          "art": "fish",
+          "z": "front"
+        },
+        "boot": {
+          "art": "boot",
+          "z": "front"
+        }
+      },
+      "steps": [
+        {
+          "walk": "center-40",
+          "speed": 40
+        },
+        {
+          "face": "right"
+        },
+        {
+          "prop": "pond",
+          "show": {
+            "x": "star+26",
+            "y": "floor-3"
+          }
+        },
+        {
+          "effect": "sparkle",
+          "at": "pond",
+          "count": 5
+        },
+        {
+          "wear": "fishing-rod"
+        },
+        {
+          "play": "cast"
+        },
+        {
+          "say": "Gone fishin'",
+          "time": 1.5
+        },
+        {
+          "pose": "sit"
+        },
+        {
+          "loop": [
+            {
+              "prop": "pond",
+              "frame": "a"
+            },
+            {
+              "wait": 0.5
+            },
+            {
+              "prop": "pond",
+              "frame": "b"
+            },
+            {
+              "wait": 0.5
+            },
+            {
+              "if": "chance:0.08",
+              "then": [
+                {
+                  "effect": "zzz",
+                  "count": 1
+                }
+              ]
+            }
+          ],
+          "until": [
+            "click",
+            "again"
+          ],
+          "for": 25
+        },
+        {
+          "pose": "stand"
+        },
+        {
+          "say": "A bite!",
+          "time": 0.8
+        },
+        {
+          "play": "reel"
+        },
+        {
+          "wait": 1.2
+        },
+        {
+          "stop": true
+        },
+        {
+          "random": [
+            [
+              {
+                "prop": "fish",
+                "show": {
+                  "x": "pond",
+                  "y": "floor"
+                }
+              },
+              {
+                "prop": "fish",
+                "move": {
+                  "x": "star+12",
+                  "y": "floor+16"
+                },
+                "time": 0.5,
+                "ease": "out"
+              },
+              {
+                "prop": "fish",
+                "move": {
+                  "y": "floor+10"
+                },
+                "time": 0.3
+              },
+              {
+                "pose": "cheer"
+              },
+              {
+                "effect": "hearts",
+                "count": 3
+              },
+              {
+                "say": "Got one!",
+                "time": 1.4
+              },
+              {
+                "prop": "fish",
+                "move": {
+                  "x": "pond",
+                  "y": "floor-2"
+                },
+                "time": 0.5,
+                "ease": "in"
+              },
+              {
+                "prop": "fish",
+                "hide": true
+              },
+              {
+                "say": "Swim free, buddy.",
+                "time": 1.4
+              }
+            ],
+            [
+              {
+                "prop": "boot",
+                "show": {
+                  "x": "pond",
+                  "y": "floor"
+                }
+              },
+              {
+                "prop": "boot",
+                "move": {
+                  "x": "star+12",
+                  "y": "floor+14"
+                },
+                "time": 0.5,
+                "ease": "out"
+              },
+              {
+                "pose": "dizzy"
+              },
+              {
+                "say": "...a boot?",
+                "time": 1.6
+              },
+              {
+                "prop": "boot",
+                "move": {
+                  "y": "floor-8"
+                },
+                "time": 0.4,
+                "ease": "in"
+              },
+              {
+                "prop": "boot",
+                "hide": true
+              }
+            ]
+          ]
+        },
+        {
+          "pose": "stand"
+        },
+        {
+          "unwear": "fishing-rod"
+        },
+        {
+          "prop": "pond",
+          "hide": true
+        },
+        {
+          "effect": "sparkle",
+          "count": 5
+        }
+      ]
+    },
+    "camping": {
+      "title": "Go Camping",
+      "props": {
+        "tent": {
+          "art": "tent",
+          "z": "front"
+        },
+        "wagon": {
+          "art": "wagon",
+          "z": "back"
+        },
+        "fire": {
+          "art": "campfire",
+          "z": "back"
+        }
+      },
+      "steps": [
+        {
+          "together": [
+            [
+              {
+                "prop": "tent",
+                "show": {
+                  "x": "left+22",
+                  "y": "floor-16"
+                }
+              },
+              {
+                "prop": "tent",
+                "move": {
+                  "y": "floor"
+                },
+                "time": 0.8,
+                "ease": "out"
+              }
+            ],
+            [
+              {
+                "walk": "left+22",
+                "speed": 34
+              }
+            ]
+          ]
+        },
+        {
+          "prop": "tent",
+          "frame": "open"
+        },
+        {
+          "wait": 0.3
+        },
+        {
+          "hide": true
+        },
+        {
+          "prop": "tent",
+          "shake": 0.9
+        },
+        {
+          "wait": 1.1
+        },
+        {
+          "prop": "wagon",
+          "show": {
+            "x": "tent",
+            "y": "floor"
+          }
+        },
+        {
+          "prop": "wagon",
+          "follow": "star",
+          "side": "behind"
+        },
+        {
+          "show": true
+        },
+        {
+          "face": "right"
+        },
+        {
+          "together": [
+            [
+              {
+                "walk": "center+20",
+                "speed": 26
+              }
+            ],
+            [
+              {
+                "wait": 1.2
+              },
+              {
+                "prop": "tent",
+                "frame": "closed"
+              },
+              {
+                "prop": "tent",
+                "move": {
+                  "y": "floor-16"
+                },
+                "time": 0.7,
+                "ease": "in"
+              },
+              {
+                "prop": "tent",
+                "hide": true
+              }
+            ]
+          ]
+        },
+        {
+          "prop": "wagon",
+          "follow": null
+        },
+        {
+          "face": "left"
+        },
+        {
+          "pose": "hold"
+        },
+        {
+          "wait": 0.4
+        },
+        {
+          "prop": "wagon",
+          "frame": "empty"
+        },
+        {
+          "face": "right"
+        },
+        {
+          "pose": "stand"
+        },
+        {
+          "prop": "fire",
+          "show": {
+            "x": "star+24",
+            "y": "floor"
+          }
+        },
+        {
+          "effect": "stars",
+          "at": "fire",
+          "count": 6
+        },
+        {
+          "pose": "sit"
+        },
+        {
+          "wear": "marshmallow"
+        },
+        {
+          "say": "Cozy.",
+          "time": 1.2
+        },
+        {
+          "loop": [
+            {
+              "prop": "fire",
+              "frame": "a"
+            },
+            {
+              "wait": 0.3
+            },
+            {
+              "prop": "fire",
+              "frame": "b"
+            },
+            {
+              "wait": 0.3
+            },
+            {
+              "if": "chance:0.1",
+              "then": [
+                {
+                  "play": "munch"
+                },
+                {
+                  "effect": "hearts",
+                  "count": 1
+                }
+              ]
+            },
+            {
+              "if": "night",
+              "then": [
+                {
+                  "if": "chance:0.1",
+                  "then": [
+                    {
+                      "effect": "zzz",
+                      "count": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "until": [
+            "click",
+            "again"
+          ],
+          "for": 300
+        },
+        {
+          "unwear": "marshmallow"
+        },
+        {
+          "pose": "stand"
+        },
+        {
+          "effect": "stars",
+          "at": "fire",
+          "count": 6
+        },
+        {
+          "prop": "fire",
+          "hide": true
+        },
+        {
+          "walk": "wagon.left-10",
+          "speed": 40
+        },
+        {
+          "face": "right"
+        },
+        {
+          "prop": "wagon",
+          "follow": "star",
+          "side": "ahead"
+        },
+        {
+          "walk": "right-40",
+          "speed": 40
+        },
+        {
+          "prop": "wagon",
+          "follow": null
+        },
+        {
+          "prop": "wagon",
+          "move": {
+            "x": "offright+40"
+          },
+          "speed": 45,
+          "ease": "linear"
+        },
+        {
+          "prop": "wagon",
+          "hide": true
+        }
+      ]
+    },
+    "seesaw": {
+      "title": "Seesaw",
+      "cast": [
+        {
+          "role": "star",
+          "who": "main"
+        },
+        {
+          "role": "friend",
+          "who": "other"
+        }
+      ],
+      "props": {
+        "seesaw": {
+          "art": "seesaw",
+          "z": "back"
+        }
+      },
+      "steps": [
+        {
+          "prop": "seesaw",
+          "show": {
+            "x": "center",
+            "y": "floor"
+          }
+        },
+        {
+          "effect": "sparkle",
+          "at": "seesaw",
+          "count": 6
+        },
+        {
+          "together": [
+            {
+              "who": "star",
+              "steps": [
+                {
+                  "walk": "seesaw.left-6",
+                  "speed": 45
+                }
+              ]
+            },
+            {
+              "who": "friend",
+              "steps": [
+                {
+                  "walk": "seesaw.right+6",
+                  "speed": 45
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "together": [
+            {
+              "who": "star",
+              "steps": [
+                {
+                  "hop": {
+                    "x": "seesaw.left+4",
+                    "y": "seesaw.bottom+7"
+                  }
+                },
+                {
+                  "face": "right"
+                }
+              ]
+            },
+            {
+              "who": "friend",
+              "steps": [
+                {
+                  "hop": {
+                    "x": "seesaw.right-4",
+                    "y": "seesaw.bottom+7"
+                  }
+                },
+                {
+                  "face": "left"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "pose": "sit",
+          "who": "star"
+        },
+        {
+          "pose": "sit",
+          "who": "friend"
+        },
+        {
+          "ride": "seesaw",
+          "who": "star",
+          "offset": {
+            "x": 4,
+            "y": 7
+          }
+        },
+        {
+          "ride": "seesaw",
+          "who": "friend",
+          "offset": {
+            "x": 40,
+            "y": 7
+          }
+        },
+        {
+          "loop": [
+            {
+              "prop": "seesaw",
+              "frame": "left"
+            },
+            {
+              "ride": "seesaw",
+              "who": "star",
+              "offset": {
+                "x": 4,
+                "y": 4
+              }
+            },
+            {
+              "ride": "seesaw",
+              "who": "friend",
+              "offset": {
+                "x": 40,
+                "y": 10
+              }
+            },
+            {
+              "pose": {
+                "legs": "tucked",
+                "eyes": "happy",
+                "arms": "up"
+              },
+              "who": "friend"
+            },
+            {
+              "pose": "sit",
+              "who": "star"
+            },
+            {
+              "wait": 0.5
+            },
+            {
+              "prop": "seesaw",
+              "frame": "flat"
+            },
+            {
+              "ride": "seesaw",
+              "who": "star",
+              "offset": {
+                "x": 4,
+                "y": 7
+              }
+            },
+            {
+              "ride": "seesaw",
+              "who": "friend",
+              "offset": {
+                "x": 40,
+                "y": 7
+              }
+            },
+            {
+              "wait": 0.12
+            },
+            {
+              "prop": "seesaw",
+              "frame": "right"
+            },
+            {
+              "ride": "seesaw",
+              "who": "star",
+              "offset": {
+                "x": 4,
+                "y": 10
+              }
+            },
+            {
+              "ride": "seesaw",
+              "who": "friend",
+              "offset": {
+                "x": 40,
+                "y": 4
+              }
+            },
+            {
+              "pose": {
+                "legs": "tucked",
+                "eyes": "happy",
+                "arms": "up"
+              },
+              "who": "star"
+            },
+            {
+              "pose": "sit",
+              "who": "friend"
+            },
+            {
+              "wait": 0.5
+            },
+            {
+              "prop": "seesaw",
+              "frame": "flat"
+            },
+            {
+              "ride": "seesaw",
+              "who": "star",
+              "offset": {
+                "x": 4,
+                "y": 7
+              }
+            },
+            {
+              "ride": "seesaw",
+              "who": "friend",
+              "offset": {
+                "x": 40,
+                "y": 7
+              }
+            },
+            {
+              "wait": 0.12
+            }
+          ],
+          "times": 5
+        },
+        {
+          "ride": null,
+          "who": "star"
+        },
+        {
+          "ride": null,
+          "who": "friend"
+        },
+        {
+          "pose": "stand",
+          "who": "star"
+        },
+        {
+          "pose": "stand",
+          "who": "friend"
+        },
+        {
+          "together": [
+            {
+              "who": "star",
+              "steps": [
+                {
+                  "hop": {
+                    "x": "seesaw.left-10",
+                    "y": "floor"
+                  }
+                }
+              ]
+            },
+            {
+              "who": "friend",
+              "steps": [
+                {
+                  "hop": {
+                    "x": "seesaw.right+10",
+                    "y": "floor"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "effect": "stars",
+          "at": "seesaw",
+          "count": 6
+        },
+        {
+          "prop": "seesaw",
+          "hide": true
+        },
+        {
+          "effect": "confetti",
+          "who": "star"
+        }
+      ]
+    },
+    "handshake": {
+      "title": "Secret Handshake",
+      "cast": [
+        {
+          "role": "star",
+          "who": "main"
+        },
+        {
+          "role": "friend",
+          "who": "other",
+          "ifMissing": "unavailable"
+        }
+      ],
+      "steps": [
+        {
+          "walk": "star+22",
+          "who": "friend",
+          "speed": 50
+        },
+        {
+          "face": "friend",
+          "who": "star"
+        },
+        {
+          "face": "star",
+          "who": "friend"
+        },
+        {
+          "together": [
+            {
+              "who": "star",
+              "steps": [
+                {
+                  "play": "handshake"
+                }
+              ]
+            },
+            {
+              "who": "friend",
+              "steps": [
+                {
+                  "play": "handshake"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "together": [
+            {
+              "who": "star",
+              "steps": [
+                {
+                  "play": "backflip"
+                }
+              ]
+            },
+            {
+              "who": "friend",
+              "steps": [
+                {
+                  "wait": 0.15
+                },
+                {
+                  "play": "backflip"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "effect": "hearts",
+          "who": "star",
+          "count": 2
+        },
+        {
+          "effect": "hearts",
+          "who": "friend",
+          "count": 2
+        }
+      ]
+    },
+    "coffee-break": {
+      "title": "Coffee Break",
+      "props": {
+        "machine": {
+          "art": "coffee-machine",
+          "z": "back"
+        }
+      },
+      "steps": [
+        {
+          "say": "Coffee time.",
+          "time": 1.2
+        },
+        {
+          "prop": "machine",
+          "show": {
+            "x": "here+34",
+            "y": "floor-20"
+          }
+        },
+        {
+          "prop": "machine",
+          "move": {
+            "y": "floor"
+          },
+          "time": 0.8,
+          "ease": "out"
+        },
+        {
+          "effect": "sparkle",
+          "at": "machine",
+          "count": 5
+        },
+        {
+          "walk": "machine.left-8",
+          "speed": 30
+        },
+        {
+          "face": "right"
+        },
+        {
+          "prop": "machine",
+          "frame": "brewing"
+        },
+        {
+          "prop": "machine",
+          "shake": 1.8
+        },
+        {
+          "loop": [
+            {
+              "effect": "float",
+              "art": "steam",
+              "at": "machine",
+              "count": 1,
+              "dx": 3,
+              "dy": 10,
+              "time": 1.2
+            },
+            {
+              "wait": 0.45
+            }
+          ],
+          "times": 4
+        },
+        {
+          "prop": "machine",
+          "frame": "idle"
+        },
+        {
+          "wear": "mug"
+        },
+        {
+          "pose": {
+            "eyes": "happy"
+          }
+        },
+        {
+          "say": "Ahh, fresh.",
+          "time": 1.3
+        },
+        {
+          "face": "left"
+        },
+        {
+          "walk": "here-18",
+          "speed": 24
+        },
+        {
+          "face": "right"
+        },
+        {
+          "pose": "sit"
+        },
+        {
+          "loop": [
+            {
+              "play": "sip"
+            },
+            {
+              "effect": "float",
+              "art": "steam",
+              "at": "star",
+              "count": 1,
+              "dx": 3,
+              "dy": 8,
+              "time": 1.2
+            },
+            {
+              "wait": 1.8
+            },
+            {
+              "if": "chance:0.15",
+              "then": [
+                {
+                  "effect": "hearts",
+                  "count": 1
+                }
+              ]
+            }
+          ],
+          "until": [
+            "click",
+            "again"
+          ],
+          "for": 90
+        },
+        {
+          "pose": "stand"
+        },
+        {
+          "say": "Back to work!",
+          "time": 1.2,
+          "async": true
+        },
+        {
+          "prop": "machine",
+          "move": {
+            "y": "floor-20"
+          },
+          "time": 0.7,
+          "ease": "in"
+        },
+        {
+          "prop": "machine",
+          "hide": true
+        },
+        {
+          "unwear": "mug"
+        }
+      ]
+    },
+    "coffee-refill": {
+      "title": "Coffee Refill",
+      "steps": [
+        {
+          "say": "Need more coffee...",
+          "time": 1.4
+        },
+        {
+          "random": [
+            [
+              {
+                "walk": "offleft",
+                "speed": 45
+              },
+              {
+                "wait": 2.5
+              },
+              {
+                "wear": "mug"
+              },
+              {
+                "walk": "start",
+                "speed": 40
+              }
+            ],
+            [
+              {
+                "walk": "offright",
+                "speed": 45
+              },
+              {
+                "wait": 2.5
+              },
+              {
+                "wear": "mug"
+              },
+              {
+                "walk": "start",
+                "speed": 40
+              }
+            ]
+          ]
+        },
+        {
+          "face": "cursor"
+        },
+        {
+          "random": [
+            [
+              {
+                "play": "sip"
+              },
+              {
+                "effect": "float",
+                "art": "steam",
+                "count": 2,
+                "dx": 3,
+                "dy": 8,
+                "time": 1.2
+              },
+              {
+                "say": "Back to it!",
+                "time": 1.3
+              }
+            ],
+            [
+              {
+                "play": "sip"
+              },
+              {
+                "play": "sip"
+              },
+              {
+                "effect": "hearts",
+                "count": 2
+              },
+              {
+                "say": "Perfect.",
+                "time": 1.2
+              }
+            ],
+            [
+              {
+                "play": "sip"
+              },
+              {
+                "say": "Maybe one shot too many...",
+                "time": 1.6
+              },
+              {
+                "walk": "here+30",
+                "speed": 110,
+                "clip": "jitter"
+              },
+              {
+                "walk": "here-60",
+                "speed": 110,
+                "clip": "jitter"
+              },
+              {
+                "walk": "here+30",
+                "speed": 110,
+                "clip": "jitter"
+              },
+              {
+                "pose": "dizzy"
+              },
+              {
+                "effect": "stars",
+                "count": 6
+              },
+              {
+                "wait": 1.2
+              },
+              {
+                "pose": "stand"
+              }
+            ]
+          ]
+        },
+        {
+          "unwear": "mug"
+        }
+      ]
+    },
+    "pizza-party": {
+      "title": "Pizza Party",
+      "cast": [
+        {
+          "role": "star",
+          "who": "main"
+        },
+        {
+          "role": "friend",
+          "who": "other"
+        },
+        {
+          "role": "friend2",
+          "who": "other",
+          "ifMissing": "skip"
+        }
+      ],
+      "props": {
+        "pizza": {
+          "art": "pizza-box",
+          "z": "back"
+        }
+      },
+      "steps": [
+        {
+          "face": "right"
+        },
+        {
+          "say": "Pizza's here!",
+          "time": 1
+        },
+        {
+          "together": [
+            {
+              "who": "friend",
+              "steps": [
+                {
+                  "walk": "star+50",
+                  "speed": 55
+                },
+                {
+                  "face": "star"
+                }
+              ]
+            },
+            {
+              "who": "friend2",
+              "steps": [
+                {
+                  "walk": "star+68",
+                  "speed": 55
+                },
+                {
+                  "face": "star"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "prop": "pizza",
+          "show": {
+            "x": "star+25",
+            "y": "top"
+          }
+        },
+        {
+          "prop": "pizza",
+          "move": {
+            "y": "floor"
+          },
+          "time": 0.7,
+          "ease": "in"
+        },
+        {
+          "effect": "stars",
+          "at": "pizza",
+          "count": 6
+        },
+        {
+          "prop": "pizza",
+          "frame": "open"
+        },
+        {
+          "effect": "sparkle",
+          "at": "pizza",
+          "count": 6
+        },
+        {
+          "say": "Dig in!",
+          "time": 1
+        },
+        {
+          "wear": "pizza-slice",
+          "who": "star"
+        },
+        {
+          "wear": "pizza-slice",
+          "who": "friend"
+        },
+        {
+          "wear": "pizza-slice",
+          "who": "friend2"
+        },
+        {
+          "prop": "pizza",
+          "frame": "empty"
+        },
+        {
+          "together": [
+            {
+              "who": "star",
+              "steps": [
+                {
+                  "play": "munch",
+                  "times": 2
+                },
+                {
+                  "effect": "hearts",
+                  "count": 2
+                }
+              ]
+            },
+            {
+              "who": "friend",
+              "steps": [
+                {
+                  "wait": 0.2
+                },
+                {
+                  "play": "munch",
+                  "times": 2
+                },
+                {
+                  "effect": "hearts",
+                  "count": 2
+                }
+              ]
+            },
+            {
+              "who": "friend2",
+              "steps": [
+                {
+                  "wait": 0.4
+                },
+                {
+                  "play": "munch",
+                  "times": 2
+                },
+                {
+                  "effect": "hearts",
+                  "count": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "unwear": "pizza-slice",
+          "who": "star"
+        },
+        {
+          "unwear": "pizza-slice",
+          "who": "friend"
+        },
+        {
+          "unwear": "pizza-slice",
+          "who": "friend2"
+        },
+        {
+          "together": [
+            {
+              "who": "star",
+              "steps": [
+                {
+                  "pose": "cheer"
+                },
+                {
+                  "hop": true,
+                  "height": 8,
+                  "time": 0.4
+                },
+                {
+                  "pose": "stand"
+                }
+              ]
+            },
+            {
+              "who": "friend",
+              "steps": [
+                {
+                  "pose": "cheer"
+                },
+                {
+                  "hop": true,
+                  "height": 8,
+                  "time": 0.4
+                },
+                {
+                  "pose": "stand"
+                }
+              ]
+            },
+            {
+              "who": "friend2",
+              "steps": [
+                {
+                  "pose": "cheer"
+                },
+                {
+                  "hop": true,
+                  "height": 8,
+                  "time": 0.4
+                },
+                {
+                  "pose": "stand"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "say": "Best party ever.",
+          "time": 1.4
+        },
+        {
+          "prop": "pizza",
+          "frame": "closed"
+        },
+        {
+          "wait": 0.3
+        },
+        {
+          "effect": "stars",
+          "at": "pizza",
+          "count": 6
+        },
+        {
+          "prop": "pizza",
+          "hide": true
+        }
+      ]
+    },
+    "file-heist": {
+      "title": "File Heist (pretend)",
+      "stayOnWindows": true,
+      "cast": [
+        {
+          "role": "thief",
+          "who": "any"
+        }
+      ],
+      "props": {
+        "loot": {
+          "art": "loot",
+          "z": "front"
+        }
+      },
+      "steps": [
+        {
+          "face": "left"
+        },
+        {
+          "pose": "surprised"
+        },
+        {
+          "wait": 0.5
+        },
+        {
+          "face": "right"
+        },
+        {
+          "wait": 0.5
+        },
+        {
+          "pose": "stand"
+        },
+        {
+          "say": "Ooh... files.",
+          "time": 1.2
+        },
+        {
+          "walk": "here+6",
+          "speed": 8,
+          "clip": "sneak"
+        },
+        {
+          "random": [
+            [
+              {
+                "prop": "loot",
+                "frame": "doc"
+              }
+            ],
+            [
+              {
+                "prop": "loot",
+                "frame": "folder"
+              }
+            ],
+            [
+              {
+                "prop": "loot",
+                "frame": "photo"
+              }
+            ]
+          ]
+        },
+        {
+          "prop": "loot",
+          "show": {
+            "x": "here+14",
+            "y": "here"
+          }
+        },
+        {
+          "prop": "loot",
+          "move": {
+            "x": "here",
+            "y": "here+11"
+          },
+          "time": 0.35,
+          "ease": "out"
+        },
+        {
+          "prop": "loot",
+          "follow": "thief",
+          "offset": {
+            "x": 0,
+            "y": 11
+          }
+        },
+        {
+          "pose": {
+            "arms": "up",
+            "eyes": "happy"
+          }
+        },
+        {
+          "say": "Yoink!",
+          "time": 0.8
+        },
+        {
+          "random": [
+            [
+              {
+                "face": "left"
+              },
+              {
+                "hop": {
+                  "x": "here-24",
+                  "y": "floor"
+                },
+                "height": 16,
+                "time": 0.6
+              },
+              {
+                "run": "offleft",
+                "speed": 95
+              }
+            ],
+            [
+              {
+                "face": "right"
+              },
+              {
+                "hop": {
+                  "x": "here+24",
+                  "y": "floor"
+                },
+                "height": 16,
+                "time": 0.6
+              },
+              {
+                "run": "offright",
+                "speed": 95
+              }
+            ]
+          ]
+        },
+        {
+          "wait": 2.5
+        },
+        {
+          "walk": "start",
+          "speed": 50
+        },
+        {
+          "face": "cursor"
+        },
+        {
+          "pose": "stand"
+        },
+        {
+          "say": "Just kidding! Putting it back.",
+          "time": 1.8
+        },
+        {
+          "prop": "loot",
+          "follow": null
+        },
+        {
+          "prop": "loot",
+          "move": {
+            "x": "start+14",
+            "y": "start"
+          },
+          "time": 0.9,
+          "ease": "out"
+        },
+        {
+          "effect": "sparkle",
+          "at": "loot",
+          "count": 5
+        },
+        {
+          "prop": "loot",
+          "hide": true
+        },
+        {
+          "say": "Your files never left.",
+          "time": 1.6
+        }
+      ]
+    },
+    "new-text": {
+      "title": "New Text",
+      "menu": false,
+      "vars": {
+        "count": "a",
+        "s": ""
+      },
+      "steps": [
+        {
+          "face": "cursor"
+        },
+        {
+          "wear": "phone"
+        },
+        {
+          "play": "buzz"
+        },
+        {
+          "play": "buzz"
+        },
+        {
+          "say": "You got {count} new text{s}!",
+          "time": 2.2,
+          "async": true
+        },
+        {
+          "effect": "sparkle",
+          "count": 4
+        },
+        {
+          "waitFor": "click",
+          "timeout": 7,
+          "then": [
+            {
+              "say": "Opening Messages!",
+              "time": 1
+            },
+            {
+              "openApp": "com.apple.MobileSMS"
+            }
+          ]
+        },
+        {
+          "unwear": "phone"
+        }
+      ]
+    },
+    "graffiti": {
+      "title": "Window Graffiti",
+      "stayOnWindows": true,
+      "cast": [
+        {
+          "role": "artist",
+          "who": "any"
+        }
+      ],
+      "props": {
+        "tag": {
+          "art": "tag",
+          "z": "back"
+        }
+      },
+      "steps": [
+        {
+          "face": "left"
+        },
+        {
+          "wait": 0.4
+        },
+        {
+          "face": "right"
+        },
+        {
+          "wait": 0.4
+        },
+        {
+          "say": "Nobody's looking...",
+          "time": 1.2
+        },
+        {
+          "walk": "start-18",
+          "speed": 20,
+          "clip": "sneak"
+        },
+        {
+          "face": "right"
+        },
+        {
+          "wear": "spray-can"
+        },
+        {
+          "prop": "tag",
+          "frame": "p1"
+        },
+        {
+          "prop": "tag",
+          "show": {
+            "x": "start",
+            "y": "start-19"
+          }
+        },
+        {
+          "play": "spray"
+        },
+        {
+          "together": [
+            [
+              {
+                "walk": "start+18",
+                "speed": 18
+              }
+            ],
+            [
+              {
+                "loop": [
+                  {
+                    "effect": "float",
+                    "art": "spray-dot",
+                    "at": "tag",
+                    "count": 3,
+                    "dx": 6,
+                    "dy": -4,
+                    "time": 0.5
+                  },
+                  {
+                    "wait": 0.3
+                  }
+                ],
+                "for": 2
+              }
+            ],
+            [
+              {
+                "wait": 0.5
+              },
+              {
+                "prop": "tag",
+                "frame": "p2"
+              },
+              {
+                "wait": 0.5
+              },
+              {
+                "prop": "tag",
+                "frame": "p3"
+              },
+              {
+                "wait": 0.5
+              },
+              {
+                "prop": "tag",
+                "frame": "p4"
+              }
+            ]
+          ]
+        },
+        {
+          "stop": true
+        },
+        {
+          "unwear": "spray-can"
+        },
+        {
+          "face": "left"
+        },
+        {
+          "pose": "cheer"
+        },
+        {
+          "say": "A masterpiece.",
+          "time": 1.4
+        },
+        {
+          "pose": {
+            "arms": "holdOut",
+            "eyes": "happy"
+          }
+        },
+        {
+          "waitFor": "click",
+          "timeout": 12,
+          "then": [
+            {
+              "pose": "surprised"
+            },
+            {
+              "play": "jitter",
+              "times": 1
+            },
+            {
+              "say": "Uh oh! Cleaning it up!",
+              "time": 1.2
+            }
+          ],
+          "else": [
+            {
+              "say": "...better not leave evidence.",
+              "time": 1.4
+            }
+          ]
+        },
+        {
+          "stop": true
+        },
+        {
+          "pose": "stand"
+        },
+        {
+          "wear": "sponge"
+        },
+        {
+          "play": "scrub"
+        },
+        {
+          "together": [
+            [
+              {
+                "walk": "start-18",
+                "speed": 18
+              }
+            ],
+            [
+              {
+                "prop": "tag",
+                "frame": "p3"
+              },
+              {
+                "wait": 0.5
+              },
+              {
+                "prop": "tag",
+                "frame": "p2"
+              },
+              {
+                "wait": 0.5
+              },
+              {
+                "prop": "tag",
+                "frame": "p1"
+              },
+              {
+                "wait": 0.5
+              },
+              {
+                "prop": "tag",
+                "hide": true
+              }
+            ]
+          ]
+        },
+        {
+          "stop": true
+        },
+        {
+          "effect": "sparkle",
+          "count": 5
+        },
+        {
+          "unwear": "sponge"
+        },
+        {
+          "say": "Spotless. Nothing happened here.",
+          "time": 1.6
+        }
+      ]
+    },
+    "ledge-dare": {
+      "title": "Ledge Dare",
+      "stayOnWindows": true,
+      "cast": [
+        {
+          "role": "daredevil",
+          "who": "any"
+        }
+      ],
+      "steps": [
+        {
+          "say": "Watch this!",
+          "time": 1
+        },
+        {
+          "walk": "ledge.right-6",
+          "speed": 30
+        },
+        {
+          "face": "right"
+        },
+        {
+          "play": "wobble"
+        },
+        {
+          "say": "Whoa... whoa...",
+          "time": 1.6
+        },
+        {
+          "stop": true
+        },
+        {
+          "face": "left"
+        },
+        {
+          "place": {
+            "x": "ledge.right+3",
+            "y": "ledge-9"
+          }
+        },
+        {
+          "effect": "stars",
+          "count": 4
+        },
+        {
+          "play": "dangle"
+        },
+        {
+          "say": "Help! Opt-click me!",
+          "time": 1.6,
+          "async": true
+        },
+        {
+          "waitFor": "click",
+          "timeout": 10,
+          "then": [
+            {
+              "stop": true
+            },
+            {
+              "hop": {
+                "x": "ledge.right-8",
+                "y": "ledge"
+              },
+              "height": 10,
+              "time": 0.45
+            },
+            {
+              "face": "cursor"
+            },
+            {
+              "effect": "hearts",
+              "count": 3
+            },
+            {
+              "pose": "cheer"
+            },
+            {
+              "say": "My hero!",
+              "time": 1.4
+            }
+          ],
+          "else": [
+            {
+              "stop": true
+            },
+            {
+              "say": "Aaah!",
+              "time": 0.5,
+              "async": true
+            },
+            {
+              "pose": "jump"
+            },
+            {
+              "hop": {
+                "x": "here+4",
+                "y": "floor"
+              },
+              "height": 2,
+              "time": 0.6
+            },
+            {
+              "pose": "dizzy"
+            },
+            {
+              "effect": "stars",
+              "count": 6
+            },
+            {
+              "wait": 1.2
+            },
+            {
+              "pose": "cheer"
+            },
+            {
+              "say": "I'm OK!",
+              "time": 1.2
+            }
+          ]
+        }
+      ]
+    },
+    "paper-airplane": {
+      "title": "Paper Airplane",
+      "cast": [
+        {
+          "role": "star",
+          "who": "main"
+        },
+        {
+          "role": "target",
+          "who": "other",
+          "ifMissing": "skip"
+        }
+      ],
+      "props": {
+        "plane": {
+          "art": "paper",
+          "z": "front"
+        }
+      },
+      "steps": [
+        {
+          "walk": "25%",
+          "speed": 40
+        },
+        {
+          "face": "right"
+        },
+        {
+          "walk": "star+150",
+          "who": "target",
+          "speed": 50,
+          "async": true
+        },
+        {
+          "pose": "sit"
+        },
+        {
+          "prop": "plane",
+          "frame": "sheet"
+        },
+        {
+          "prop": "plane",
+          "show": {
+            "x": "star+9",
+            "y": "floor+1"
+          }
+        },
+        {
+          "play": "fold"
+        },
+        {
+          "prop": "plane",
+          "frame": "level"
+        },
+        {
+          "effect": "sparkle",
+          "at": "plane",
+          "count": 3
+        },
+        {
+          "pose": "stand"
+        },
+        {
+          "prop": "plane",
+          "move": {
+            "x": "star+8",
+            "y": "floor+9"
+          },
+          "time": 0.3
+        },
+        {
+          "play": "throw"
+        },
+        {
+          "prop": "plane",
+          "frame": "up"
+        },
+        {
+          "prop": "plane",
+          "move": {
+            "x": "star+50",
+            "y": "floor+38"
+          },
+          "time": 0.8,
+          "ease": "out"
+        },
+        {
+          "prop": "plane",
+          "frame": "level"
+        },
+        {
+          "prop": "plane",
+          "move": {
+            "x": "star+85",
+            "y": "floor+42"
+          },
+          "time": 0.5,
+          "ease": "linear"
+        },
+        {
+          "prop": "plane",
+          "frame": "up"
+        },
+        {
+          "prop": "plane",
+          "move": {
+            "x": "star+97",
+            "y": "floor+54"
+          },
+          "time": 0.25,
+          "ease": "linear"
+        },
+        {
+          "prop": "plane",
+          "flip": true
+        },
+        {
+          "prop": "plane",
+          "frame": "level"
+        },
+        {
+          "prop": "plane",
+          "move": {
+            "x": "star+87",
+            "y": "floor+60"
+          },
+          "time": 0.25,
+          "ease": "linear"
+        },
+        {
+          "prop": "plane",
+          "frame": "down"
+        },
+        {
+          "prop": "plane",
+          "move": {
+            "x": "star+80",
+            "y": "floor+50"
+          },
+          "time": 0.25,
+          "ease": "linear"
+        },
+        {
+          "prop": "plane",
+          "flip": false
+        },
+        {
+          "prop": "plane",
+          "frame": "down"
+        },
+        {
+          "prop": "plane",
+          "move": {
+            "x": "star+90",
+            "y": "floor+43"
+          },
+          "time": 0.25,
+          "ease": "linear"
+        },
+        {
+          "prop": "plane",
+          "frame": "level"
+        },
+        {
+          "prop": "plane",
+          "move": {
+            "x": "star+120",
+            "y": "floor+40"
+          },
+          "time": 0.5,
+          "ease": "linear"
+        },
+        {
+          "if": "alone",
+          "then": [
+            {
+              "prop": "plane",
+              "frame": "down"
+            },
+            {
+              "prop": "plane",
+              "move": {
+                "x": "star+160",
+                "y": "floor"
+              },
+              "time": 0.6,
+              "ease": "in"
+            },
+            {
+              "effect": "stars",
+              "at": "plane",
+              "count": 6
+            },
+            {
+              "say": "Nailed the landing.",
+              "time": 1.4
+            }
+          ],
+          "else": [
+            {
+              "prop": "plane",
+              "frame": "down"
+            },
+            {
+              "prop": "plane",
+              "move": {
+                "x": "target",
+                "y": "target.head"
+              },
+              "time": 0.6,
+              "ease": "in"
+            },
+            {
+              "effect": "stars",
+              "at": "target",
+              "count": 6
+            },
+            {
+              "pose": "dizzy",
+              "who": "target"
+            },
+            {
+              "say": "Hey!",
+              "who": "target",
+              "time": 1
+            },
+            {
+              "pose": "cheer"
+            },
+            {
+              "say": "Bullseye!",
+              "time": 1.2
+            },
+            {
+              "pose": "stand",
+              "who": "target"
+            }
+          ]
+        },
+        {
+          "prop": "plane",
+          "hide": true
+        }
+      ]
+    },
+    "puppet": {
+      "title": "Take the Controls",
+      "steps": [
+        {
+          "say": "You drive!",
+          "time": 1
+        },
+        {
+          "pose": "stand"
+        },
+        {
+          "puppet": {
+            "speed": 45,
+            "jump": 20,
+            "hint": "Arrows move, Esc stops",
+            "keys": {
+              "f": [
+                {
+                  "play": "backflip"
+                }
+              ],
+              "w": [
+                {
+                  "play": "wave"
+                }
+              ],
+              "h": [
+                {
+                  "effect": "hearts",
+                  "count": 3
+                }
+              ],
+              "c": [
+                {
+                  "play": "cartwheel"
+                }
+              ],
+              "b": [
+                {
+                  "play": "bow"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "say": "That was fun!",
+          "time": 1.4
+        }
+      ]
+    }
+  },
+  "bindings": [
+    {
+      "sequence": "up up down down",
+      "run": "backflip"
+    },
+    {
+      "sequence": "f",
+      "run": "fishing"
+    },
+    {
+      "sequence": "t",
+      "run": "camping"
+    },
+    {
+      "sequence": "s",
+      "run": "seesaw"
+    },
+    {
+      "sequence": "h",
+      "run": "handshake"
+    },
+    {
+      "sequence": "p",
+      "run": "puppet"
+    },
+    {
+      "sequence": "b",
+      "run": "bow"
+    },
+    {
+      "sequence": "w",
+      "run": "wave"
+    },
+    {
+      "sequence": "c",
+      "run": "cartwheel"
+    },
+    {
+      "sequence": "m",
+      "run": "moonwalk"
+    },
+    {
+      "sequence": "d",
+      "run": "robot-dance"
+    },
+    {
+      "sequence": "r",
+      "run": "roll"
+    },
+    {
+      "sequence": "x",
+      "run": "stretch"
+    },
+    {
+      "sequence": "e",
+      "run": "coffee-break"
+    },
+    {
+      "sequence": "g",
+      "run": "coffee-refill"
+    },
+    {
+      "sequence": "z",
+      "run": "pizza-party"
+    },
+    {
+      "sequence": "l",
+      "run": "file-heist"
+    },
+    {
+      "sequence": "i",
+      "run": "graffiti"
+    },
+    {
+      "sequence": "j",
+      "run": "ledge-dare"
+    },
+    {
+      "sequence": "a",
+      "run": "paper-airplane"
+    },
+    {
+      "sequence": "n",
+      "run": "new-text"
+    }
+  ],
+  "triggers": [
+    {
+      "at": "10:30",
+      "days": "weekdays",
+      "run": "coffee-break"
+    },
+    {
+      "every": "90m",
+      "if": "busy",
+      "run": "coffee-refill"
+    },
+    {
+      "when": "claude",
+      "event": "Stop",
+      "chance": 0.15,
+      "cooldown": "2h",
+      "delay": "4s",
+      "run": "pizza-party"
+    },
+    {
+      "when": "on-window",
+      "app": "Finder",
+      "chance": 0.35,
+      "cooldown": "20m",
+      "run": "file-heist"
+    },
+    {
+      "when": "new-text",
+      "run": "new-text"
+    },
+    {
+      "when": "on-window",
+      "app": "any",
+      "chance": 0.15,
+      "cooldown": "45m",
+      "run": "graffiti"
+    },
+    {
+      "when": "on-window",
+      "app": "any",
+      "chance": 0.2,
+      "cooldown": "30m",
+      "run": "ledge-dare"
+    },
+    {
+      "every": "75m",
+      "if": "not:busy",
+      "chance": 0.5,
+      "run": "paper-airplane"
+    }
+  ]
+}
+"""#
+}

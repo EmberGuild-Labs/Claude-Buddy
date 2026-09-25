@@ -12,6 +12,8 @@ final class MenuController: NSObject, NSMenuDelegate {
     private let schoolWindows: SchoolWindows
     private let hotKey: HotKey
     private let napHotKey: HotKey
+    /// Adds the "Extras" submenu (tricks, accessories, leader key, packs).
+    var extras: ExtrasController?
 
     init(settings: Settings, activity: ClaudeActivity, overlay: OverlayController, server: EventServer,
          school: SchoolStore, schoolWindows: SchoolWindows, hotKey: HotKey, napHotKey: HotKey) {
@@ -123,6 +125,7 @@ final class MenuController: NSObject, NSMenuDelegate {
             demoMenu.addItem(it)
         }
         menu.addItem(submenu("Try an Animation", demoMenu))
+        if let extras { menu.addItem(extras.menuItem()) }
         let extras = overlay.stage.extraBuddyCount
         let dismiss = item(extras > 0 ? "Dismiss Extra Buddies (\(extras))" : "Dismiss Extra Buddies", #selector(dismissExtras))
         if extras == 0 { dismiss.action = nil }
