@@ -288,6 +288,141 @@ enum BuiltInPack {
         ]
       }
     },
+    "tag": {
+      "frames": {
+        "p1": [
+          ".......KKK.........................",
+          ".......KPP.........................",
+          ".......KPK.........................",
+          ".......KPP.........................",
+          ".......KPK.........................",
+          ".......KPP.........................",
+          ".......KKK.........................",
+          ".KKKKKKKK..........................",
+          ".KPKPKKPKK.........................",
+          ".KPKPKPKPK.........................",
+          ".KPKPKPPPK.........................",
+          ".KPPPKPKPK.........................",
+          ".KPKPKPKPK.........................",
+          ".KKPKKKKKP.........................",
+          "..KPK...KP.........................",
+          "..KPK...KK.........................",
+          "..KKK.............................."
+        ],
+        "p2": [
+          ".......KKKKKKKKKKKK................",
+          ".......KPPKKPKPKPPK................",
+          ".......KPKPKPKPKPKP................",
+          ".......KPPKKPKPKPKP................",
+          ".......KPKPKPKPKPKP................",
+          ".......KPPKKPPPKPPK................",
+          ".......KKKKKKKKKKKK................",
+          ".KKKKKKKK.KKKK...KK................",
+          ".KPKPKKPKKKPPK...KP................",
+          ".KPKPKPKPKPKKK...KP................",
+          ".KPKPKPPPKKPKK...KP................",
+          ".KPPPKPKPKKKPK...KP................",
+          ".KPKPKPKPKPPKK.KKKP................",
+          ".KKPKKKKKPKKK..KPKK................",
+          "..KPK...KPK....KPK.................",
+          "..KPK...KKK....KPK.................",
+          "..KKK..........KPK................."
+        ],
+        "p3": [
+          ".......KKKKKKKKKKKKKKKKKKKKK.......",
+          ".......KPPKKPKPKPPKKPPKKPKPK.......",
+          ".......KPKPKPKPKPKPKPKPKPKPK.......",
+          ".......KPPKKPKPKPKPKPKPKKPKH.......",
+          ".......KPKPKPKPKPKPKPKPKKPKK.......",
+          ".......KPPKKPPPKPPKKPPKKKPKK.......",
+          ".......KKKKKKKKKKKKKKKK.KKK........",
+          ".KKKKKKKK.KKKK...KKKKKKKKKKK.......",
+          ".KPKPKKPKKKPPK...KPKPKPPPKPP.......",
+          ".KPKPKPKPKPKKK...KPKPKPKKKPK.......",
+          ".KPKPKPPPKKPKK...KPPPKPPKKPP.......",
+          ".KPPPKPKPKKKPK...KPKPKPKKKPK.......",
+          ".KPKPKPKPKPPKK.KKKPKPKPPPKPK.......",
+          ".KKPKKKKKPKKK..KPKKKKKKKPKKK.......",
+          "..KPK...KPK....KPK.....KPK.........",
+          "..KPK...KKK....KPK.....KKK.........",
+          "..KKK..........KPK................."
+        ],
+        "p4": [
+          ".......KKKKKKKKKKKKKKKKKKKKK.......",
+          ".......KPPKKPKPKPPKKPPKKPKPKKKKK...",
+          ".......KPKPKPKPKPKPKPKPKPKPKHKHKK..",
+          ".......KPPKKPKPKPKPKPKPKKPKHHHHHK..",
+          ".......KPKPKPKPKPKPKPKPKKPKKHHHKK..",
+          ".......KPPKKPPPKPPKKPPKKKPKKKHKK...",
+          ".......KKKKKKKKKKKKKKKK.KKK.KKK....",
+          ".KKKKKKKK.KKKK...KKKKKKKKKKKKKKKKK.",
+          ".KPKPKKPKKKPPK...KPKPKPPPKPPKKPPPK.",
+          ".KPKPKPKPKPKKK...KPKPKPKKKPKPKPKKK.",
+          ".KPKPKPPPKKPKK...KPPPKPPKKPPKKPPK..",
+          ".KPPPKPKPKKKPK...KPKPKPKKKPKPKPKKK.",
+          ".KPKPKPKPKPPKK.KKKPKPKPPPKPKPKPPPK.",
+          ".KKPKKKKKPKKK..KPKKKKKKKPKKKKKKPKK.",
+          "..KPK...KPK....KPK.....KPK....KPK..",
+          "..KPK...KKK....KPK.....KKK....KPK..",
+          "..KKK..........KPK............KKK.."
+        ]
+      },
+      "frame": "p4",
+      "colors": {
+        "P": "#FF4FA3",
+        "H": "#5CE1FF",
+        "K": "#1E1E24"
+      }
+    },
+    "paper": {
+      "frames": {
+        "sheet": [
+          "WWWWW",
+          "WllWW",
+          "WWWWW",
+          "WlllW",
+          "WWWWW",
+          "WllWW",
+          "WWWWW"
+        ],
+        "level": [
+          "W.......",
+          "WW......",
+          "WWWWWWWW",
+          ".lWWWWW.",
+          "..lW...."
+        ],
+        "up": [
+          ".......W",
+          "......WW",
+          "....WWW.",
+          "..WWWW..",
+          "WWWl....",
+          "Wl......"
+        ],
+        "down": [
+          "Wl......",
+          "WWWl....",
+          "..WWWW..",
+          "....WWW.",
+          "......WW",
+          ".......W"
+        ]
+      },
+      "frame": "sheet",
+      "colors": {
+        "W": "white",
+        "l": "#9AA0AC"
+      }
+    },
+    "spray-dot": {
+      "rows": [
+        "P"
+      ],
+      "colors": {
+        "P": "#FF4FA3"
+      }
+    },
     "coffee-machine": {
       "frames": {
         "idle": [
@@ -585,6 +720,48 @@ enum BuiltInPack {
         "KSSK",
         "KSSK",
         "KKKK"
+      ]
+    },
+    "spray-can": {
+      "title": "Spray Can",
+      "slot": "held",
+      "offset": [
+        1,
+        0
+      ],
+      "colors": {
+        "C": "#3BA55C",
+        "c": "#2A7A42",
+        "N": "#D6D8DE",
+        "P": "#FF4FA3"
+      },
+      "rows": [
+        ".P.",
+        ".N.",
+        "CCC",
+        "CcC",
+        "CCC",
+        "CcC",
+        "CCC"
+      ]
+    },
+    "sponge": {
+      "title": "Sponge",
+      "slot": "held",
+      "offset": [
+        1,
+        0
+      ],
+      "colors": {
+        "Y": "#FFD447",
+        "y": "#D9A92E",
+        "G": "#3BA55C"
+      },
+      "rows": [
+        "GGGG",
+        "YyYY",
+        "YYyY",
+        "YYYY"
       ]
     },
     "pizza-slice": {
@@ -1046,6 +1223,137 @@ enum BuiltInPack {
         {
           "eyes": "happy",
           "arms": "holdOut",
+          "time": 0.3
+        }
+      ]
+    },
+    "wobble": {
+      "loop": true,
+      "tween": true,
+      "frames": [
+        {
+          "angle": 12,
+          "arms": "waveHigh",
+          "eyes": "wide",
+          "time": 0.18
+        },
+        {
+          "angle": -6,
+          "arms": "up",
+          "eyes": "wide",
+          "time": 0.18
+        },
+        {
+          "angle": 16,
+          "arms": "waveLow",
+          "eyes": "wide",
+          "time": 0.18
+        },
+        {
+          "angle": -4,
+          "arms": "up",
+          "eyes": "wide",
+          "time": 0.18
+        }
+      ]
+    },
+    "dangle": {
+      "loop": true,
+      "tween": true,
+      "frames": [
+        {
+          "angle": 6,
+          "arms": "waveHigh",
+          "eyes": "wide",
+          "legs": "stepA",
+          "time": 0.4
+        },
+        {
+          "angle": -6,
+          "arms": "waveHigh",
+          "eyes": "wide",
+          "legs": "stepB",
+          "time": 0.4
+        }
+      ]
+    },
+    "spray": {
+      "loop": true,
+      "frames": [
+        {
+          "arms": "holdOut",
+          "eyes": "happy",
+          "time": 0.12
+        },
+        {
+          "arms": "typeA",
+          "eyes": "happy",
+          "bob": 1,
+          "time": 0.12
+        }
+      ]
+    },
+    "scrub": {
+      "loop": true,
+      "frames": [
+        {
+          "arms": "typeA",
+          "eyes": "wide",
+          "dx": -1,
+          "time": 0.08
+        },
+        {
+          "arms": "typeB",
+          "eyes": "wide",
+          "dx": 1,
+          "time": 0.08
+        }
+      ]
+    },
+    "fold": {
+      "frames": [
+        {
+          "legs": "tucked",
+          "arms": "typeA",
+          "time": 0.25
+        },
+        {
+          "legs": "tucked",
+          "arms": "typeB",
+          "time": 0.25
+        },
+        {
+          "legs": "tucked",
+          "arms": "typeA",
+          "time": 0.25
+        },
+        {
+          "legs": "tucked",
+          "arms": "typeB",
+          "time": 0.25
+        },
+        {
+          "legs": "tucked",
+          "arms": "typeA",
+          "time": 0.25
+        },
+        {
+          "legs": "tucked",
+          "arms": "typeB",
+          "time": 0.25
+        }
+      ]
+    },
+    "throw": {
+      "frames": [
+        {
+          "arms": "hammerUp",
+          "eyes": "wide",
+          "time": 0.25
+        },
+        {
+          "arms": "holdOut",
+          "eyes": "happy",
           "time": 0.3
         }
       ]
@@ -2792,6 +3100,593 @@ enum BuiltInPack {
         }
       ]
     },
+    "graffiti": {
+      "title": "Window Graffiti",
+      "stayOnWindows": true,
+      "cast": [
+        {
+          "role": "artist",
+          "who": "any"
+        }
+      ],
+      "props": {
+        "tag": {
+          "art": "tag",
+          "z": "back"
+        }
+      },
+      "steps": [
+        {
+          "face": "left"
+        },
+        {
+          "wait": 0.4
+        },
+        {
+          "face": "right"
+        },
+        {
+          "wait": 0.4
+        },
+        {
+          "say": "Nobody's looking...",
+          "time": 1.2
+        },
+        {
+          "walk": "start-18",
+          "speed": 20,
+          "clip": "sneak"
+        },
+        {
+          "face": "right"
+        },
+        {
+          "wear": "spray-can"
+        },
+        {
+          "prop": "tag",
+          "frame": "p1"
+        },
+        {
+          "prop": "tag",
+          "show": {
+            "x": "start",
+            "y": "start-19"
+          }
+        },
+        {
+          "play": "spray"
+        },
+        {
+          "together": [
+            [
+              {
+                "walk": "start+18",
+                "speed": 18
+              }
+            ],
+            [
+              {
+                "loop": [
+                  {
+                    "effect": "float",
+                    "art": "spray-dot",
+                    "at": "tag",
+                    "count": 3,
+                    "dx": 6,
+                    "dy": -4,
+                    "time": 0.5
+                  },
+                  {
+                    "wait": 0.3
+                  }
+                ],
+                "for": 2
+              }
+            ],
+            [
+              {
+                "wait": 0.5
+              },
+              {
+                "prop": "tag",
+                "frame": "p2"
+              },
+              {
+                "wait": 0.5
+              },
+              {
+                "prop": "tag",
+                "frame": "p3"
+              },
+              {
+                "wait": 0.5
+              },
+              {
+                "prop": "tag",
+                "frame": "p4"
+              }
+            ]
+          ]
+        },
+        {
+          "stop": true
+        },
+        {
+          "unwear": "spray-can"
+        },
+        {
+          "face": "left"
+        },
+        {
+          "pose": "cheer"
+        },
+        {
+          "say": "A masterpiece.",
+          "time": 1.4
+        },
+        {
+          "pose": {
+            "arms": "holdOut",
+            "eyes": "happy"
+          }
+        },
+        {
+          "waitFor": "click",
+          "timeout": 12,
+          "then": [
+            {
+              "pose": "surprised"
+            },
+            {
+              "play": "jitter",
+              "times": 1
+            },
+            {
+              "say": "Uh oh! Cleaning it up!",
+              "time": 1.2
+            }
+          ],
+          "else": [
+            {
+              "say": "...better not leave evidence.",
+              "time": 1.4
+            }
+          ]
+        },
+        {
+          "stop": true
+        },
+        {
+          "pose": "stand"
+        },
+        {
+          "wear": "sponge"
+        },
+        {
+          "play": "scrub"
+        },
+        {
+          "together": [
+            [
+              {
+                "walk": "start-18",
+                "speed": 18
+              }
+            ],
+            [
+              {
+                "prop": "tag",
+                "frame": "p3"
+              },
+              {
+                "wait": 0.5
+              },
+              {
+                "prop": "tag",
+                "frame": "p2"
+              },
+              {
+                "wait": 0.5
+              },
+              {
+                "prop": "tag",
+                "frame": "p1"
+              },
+              {
+                "wait": 0.5
+              },
+              {
+                "prop": "tag",
+                "hide": true
+              }
+            ]
+          ]
+        },
+        {
+          "stop": true
+        },
+        {
+          "effect": "sparkle",
+          "count": 5
+        },
+        {
+          "unwear": "sponge"
+        },
+        {
+          "say": "Spotless. Nothing happened here.",
+          "time": 1.6
+        }
+      ]
+    },
+    "ledge-dare": {
+      "title": "Ledge Dare",
+      "stayOnWindows": true,
+      "cast": [
+        {
+          "role": "daredevil",
+          "who": "any"
+        }
+      ],
+      "steps": [
+        {
+          "say": "Watch this!",
+          "time": 1
+        },
+        {
+          "walk": "ledge.right-6",
+          "speed": 30
+        },
+        {
+          "face": "right"
+        },
+        {
+          "play": "wobble"
+        },
+        {
+          "say": "Whoa... whoa...",
+          "time": 1.6
+        },
+        {
+          "stop": true
+        },
+        {
+          "face": "left"
+        },
+        {
+          "place": {
+            "x": "ledge.right+3",
+            "y": "ledge-9"
+          }
+        },
+        {
+          "effect": "stars",
+          "count": 4
+        },
+        {
+          "play": "dangle"
+        },
+        {
+          "say": "Help! Opt-click me!",
+          "time": 1.6,
+          "async": true
+        },
+        {
+          "waitFor": "click",
+          "timeout": 10,
+          "then": [
+            {
+              "stop": true
+            },
+            {
+              "hop": {
+                "x": "ledge.right-8",
+                "y": "ledge"
+              },
+              "height": 10,
+              "time": 0.45
+            },
+            {
+              "face": "cursor"
+            },
+            {
+              "effect": "hearts",
+              "count": 3
+            },
+            {
+              "pose": "cheer"
+            },
+            {
+              "say": "My hero!",
+              "time": 1.4
+            }
+          ],
+          "else": [
+            {
+              "stop": true
+            },
+            {
+              "say": "Aaah!",
+              "time": 0.5,
+              "async": true
+            },
+            {
+              "pose": "jump"
+            },
+            {
+              "hop": {
+                "x": "here+4",
+                "y": "floor"
+              },
+              "height": 2,
+              "time": 0.6
+            },
+            {
+              "pose": "dizzy"
+            },
+            {
+              "effect": "stars",
+              "count": 6
+            },
+            {
+              "wait": 1.2
+            },
+            {
+              "pose": "cheer"
+            },
+            {
+              "say": "I'm OK!",
+              "time": 1.2
+            }
+          ]
+        }
+      ]
+    },
+    "paper-airplane": {
+      "title": "Paper Airplane",
+      "cast": [
+        {
+          "role": "star",
+          "who": "main"
+        },
+        {
+          "role": "target",
+          "who": "other",
+          "ifMissing": "skip"
+        }
+      ],
+      "props": {
+        "plane": {
+          "art": "paper",
+          "z": "front"
+        }
+      },
+      "steps": [
+        {
+          "walk": "25%",
+          "speed": 40
+        },
+        {
+          "face": "right"
+        },
+        {
+          "walk": "star+150",
+          "who": "target",
+          "speed": 50,
+          "async": true
+        },
+        {
+          "pose": "sit"
+        },
+        {
+          "prop": "plane",
+          "frame": "sheet"
+        },
+        {
+          "prop": "plane",
+          "show": {
+            "x": "star+9",
+            "y": "floor+1"
+          }
+        },
+        {
+          "play": "fold"
+        },
+        {
+          "prop": "plane",
+          "frame": "level"
+        },
+        {
+          "effect": "sparkle",
+          "at": "plane",
+          "count": 3
+        },
+        {
+          "pose": "stand"
+        },
+        {
+          "prop": "plane",
+          "move": {
+            "x": "star+8",
+            "y": "floor+9"
+          },
+          "time": 0.3
+        },
+        {
+          "play": "throw"
+        },
+        {
+          "prop": "plane",
+          "frame": "up"
+        },
+        {
+          "prop": "plane",
+          "move": {
+            "x": "star+50",
+            "y": "floor+38"
+          },
+          "time": 0.8,
+          "ease": "out"
+        },
+        {
+          "prop": "plane",
+          "frame": "level"
+        },
+        {
+          "prop": "plane",
+          "move": {
+            "x": "star+85",
+            "y": "floor+42"
+          },
+          "time": 0.5,
+          "ease": "linear"
+        },
+        {
+          "prop": "plane",
+          "frame": "up"
+        },
+        {
+          "prop": "plane",
+          "move": {
+            "x": "star+97",
+            "y": "floor+54"
+          },
+          "time": 0.25,
+          "ease": "linear"
+        },
+        {
+          "prop": "plane",
+          "flip": true
+        },
+        {
+          "prop": "plane",
+          "frame": "level"
+        },
+        {
+          "prop": "plane",
+          "move": {
+            "x": "star+87",
+            "y": "floor+60"
+          },
+          "time": 0.25,
+          "ease": "linear"
+        },
+        {
+          "prop": "plane",
+          "frame": "down"
+        },
+        {
+          "prop": "plane",
+          "move": {
+            "x": "star+80",
+            "y": "floor+50"
+          },
+          "time": 0.25,
+          "ease": "linear"
+        },
+        {
+          "prop": "plane",
+          "flip": false
+        },
+        {
+          "prop": "plane",
+          "frame": "down"
+        },
+        {
+          "prop": "plane",
+          "move": {
+            "x": "star+90",
+            "y": "floor+43"
+          },
+          "time": 0.25,
+          "ease": "linear"
+        },
+        {
+          "prop": "plane",
+          "frame": "level"
+        },
+        {
+          "prop": "plane",
+          "move": {
+            "x": "star+120",
+            "y": "floor+40"
+          },
+          "time": 0.5,
+          "ease": "linear"
+        },
+        {
+          "if": "alone",
+          "then": [
+            {
+              "prop": "plane",
+              "frame": "down"
+            },
+            {
+              "prop": "plane",
+              "move": {
+                "x": "star+160",
+                "y": "floor"
+              },
+              "time": 0.6,
+              "ease": "in"
+            },
+            {
+              "effect": "stars",
+              "at": "plane",
+              "count": 6
+            },
+            {
+              "say": "Nailed the landing.",
+              "time": 1.4
+            }
+          ],
+          "else": [
+            {
+              "prop": "plane",
+              "frame": "down"
+            },
+            {
+              "prop": "plane",
+              "move": {
+                "x": "target",
+                "y": "target.head"
+              },
+              "time": 0.6,
+              "ease": "in"
+            },
+            {
+              "effect": "stars",
+              "at": "target",
+              "count": 6
+            },
+            {
+              "pose": "dizzy",
+              "who": "target"
+            },
+            {
+              "say": "Hey!",
+              "who": "target",
+              "time": 1
+            },
+            {
+              "pose": "cheer"
+            },
+            {
+              "say": "Bullseye!",
+              "time": 1.2
+            },
+            {
+              "pose": "stand",
+              "who": "target"
+            }
+          ]
+        },
+        {
+          "prop": "plane",
+          "hide": true
+        }
+      ]
+    },
     "puppet": {
       "title": "Take the Controls",
       "steps": [
@@ -2914,6 +3809,18 @@ enum BuiltInPack {
       "run": "file-heist"
     },
     {
+      "sequence": "i",
+      "run": "graffiti"
+    },
+    {
+      "sequence": "j",
+      "run": "ledge-dare"
+    },
+    {
+      "sequence": "a",
+      "run": "paper-airplane"
+    },
+    {
       "sequence": "n",
       "run": "new-text"
     }
@@ -2947,6 +3854,26 @@ enum BuiltInPack {
     {
       "when": "new-text",
       "run": "new-text"
+    },
+    {
+      "when": "on-window",
+      "app": "any",
+      "chance": 0.15,
+      "cooldown": "45m",
+      "run": "graffiti"
+    },
+    {
+      "when": "on-window",
+      "app": "any",
+      "chance": 0.2,
+      "cooldown": "30m",
+      "run": "ledge-dare"
+    },
+    {
+      "every": "75m",
+      "if": "not:busy",
+      "chance": 0.5,
+      "run": "paper-airplane"
     }
   ]
 }

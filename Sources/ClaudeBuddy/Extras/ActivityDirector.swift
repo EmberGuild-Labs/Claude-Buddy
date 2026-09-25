@@ -318,6 +318,8 @@ final class Performance {
     var clock: TimeInterval = 0
     /// Fills `{placeholders}` in `say` text: {count}, {s}, {app}, {project}, {tool}, …
     let vars: [String: String]
+    /// The stretch of window edge the first buddy started on (`ledge.left`, `ledge.right`, `ledge`).
+    private(set) var ledge: (range: ClosedRange<CGFloat>, y: CGFloat)?
 
     var stage: BuddyStage { director.stage }
     var P: CGFloat { stage.pixel }
@@ -419,6 +421,11 @@ final class Performance {
                 a.startY = a.y
                 a.facing = a.buddy.facing
             }
+            if def.stayOnWindows, let first = actors[def.starRole] ?? actors.values.first,
+               first.buddy.platform > 0, let w = stage.windowPlatforms[first.buddy.platform],
+               let seg = w.segments.first(where: { $0.contains(first.x) }) {
+                ledge = (seg, w.origin.y)
+            }
             casting = false
             root = TrackRun(steps: def.steps, who: nil, perf: self)
             signals = []
@@ -480,6 +487,10 @@ final class Performance {
         case "offleft": return -half * 3 + off
         case "offright": return w + half * 3 + off
         case "main": return (stage.mainBuddy?.pos.x ?? w / 2) + off
+        // The window edge it started on; on the floor, the screen edges stand in.
+        case "ledge": return (ledge.map { ($0.range.lowerBound + $0.range.upperBound) / 2 } ?? w / 2) + off
+        case "ledge.left": return (ledge?.range.lowerBound ?? 0) + off
+        case "ledge.right": return (ledge?.range.upperBound ?? w) + off
         default: break
         }
         let parts = base.split(separator: ".", maxSplits: 1).map(String.init)
@@ -506,6 +517,7 @@ final class Performance {
         case "top": return stage.bounds.height + off
         case "here": return (a?.y ?? floor) + off
         case "cursor": return (stage.mouse?.y ?? floor) + off
+        case "ledge": return (ledge?.y ?? floor) + off
         default: break
         }
         let parts = base.split(separator: ".", maxSplits: 1).map(String.init)
@@ -626,7 +638,9 @@ final class Performance {
             a.bubble.isHidden = false
             let half = a.bubble.bounds.width / 2
             let bx = min(max(x, half + 4), stage.bounds.width - half - 4)
-            a.bubble.position = CGPoint(x: bx.rounded(), y: (y + 14 * P).rounded())
+            // Above its head, but never off the top of the screen (a window near the menu bar).
+            let by = min(y + 14 * P, stage.bounds.height - a.bubble.bounds.height - 2)
+            a.bubble.position = CGPoint(x: bx.rounded(), y: by.rounded())
         } else {
             a.bubble.isHidden = true
             if clock >= a.sayUntil { a.sayText = nil }

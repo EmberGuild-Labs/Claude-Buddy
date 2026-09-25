@@ -21,6 +21,19 @@ enum ExtrasSelfTest {
         check("built-in pack has tricks, props routines, and accessories",
               builtin.activities.count >= 12 && builtin.accessories.count >= 6 && builtin.clips.count >= 8,
               "activities=\(builtin.activities.count) accessories=\(builtin.accessories.count) clips=\(builtin.clips.count)")
+        var unprintable: [String] = []
+        for a in builtin.activities.values {
+            builtin.forEachStep(a.steps) { step in
+                // PixelFont turns characters it can't draw into "?".
+                if case .say(_, let raw, _) = step {
+                    // {placeholders} are filled in before they're shown.
+                    let text = raw.replacingOccurrences(of: "\\{[a-z]+\\}", with: "x", options: .regularExpression)
+                    guard PixelFont.normalize(text).filter({ $0 == "?" }).count != text.filter({ $0 == "?" }).count else { return }
+                    unprintable.append(text)
+                }
+            }
+        }
+        check("every built-in speech bubble uses characters the pixel font can draw", unprintable.isEmpty, "\(unprintable)")
         let example = PackParser.parse(data: Data(ExamplePack.json.utf8), file: nil, fallbackID: "example")
         let withExample = ExtrasCatalog(packs: [BuiltInPack.load(), example])
         check("example pack has no problems", withExample.problems.isEmpty, withExample.problems.joined(separator: "\n  "))
@@ -217,7 +230,7 @@ enum ExtrasSelfTest {
         let heistPack = PackParser.parse(data: Data(#"{"id": "t", "triggers": [{"when": "on-window", "app": "Finder", "run": "file-heist"}]}"#.utf8),
                                          file: nil, fallbackID: "t")
         let heistController = ExtrasController(stage: stage)
-        heistController.useTriggers(ExtrasCatalog(packs: [BuiltInPack.load(), heistPack]).triggers)
+        heistController.useTriggers(ExtrasCatalog(packs: [BuiltInPack.load(), heistPack]).triggers.filter { $0.pack == "t" })
         stage.windowPlatforms = [7: WindowPlatform(origin: CGPoint(x: 0, y: 400), segments: [0...1440], owner: "com.apple.finder")]
         let climber = stage.summonGuest(hat: .topHat)!
         climber.isGuest = false  // Like a session buddy: it stays afterwards.
@@ -226,8 +239,10 @@ enum ExtrasSelfTest {
         simulate(0.5)
         let heist = director.performance
         let thief = heist?.actors["thief"]
+        // Whoever's up on the Finder window does it (the main buddy may have climbed up too).
+        let thiefBuddy = thief?.buddy ?? climber
         check("a buddy on a Finder window starts the heist, right there on the window",
-              heist?.def.id == "file-heist" && thief?.buddy === climber && abs((thief?.startY ?? 0) - 400) < 1,
+              heist?.def.id == "file-heist" && abs((thief?.startY ?? 0) - 400) < 1,
               "activity=\(director.currentID ?? "none") y=\(thief?.startY ?? -1)")
         var sawLoot = false
         simulate(40) {
@@ -235,10 +250,33 @@ enum ExtrasSelfTest {
             return !director.isActive
         }
         simulate(1)
-        check("the heist grabs a pretend file, runs off, and brings it back", sawLoot && !director.isActive && !climber.isScripted
-              && climber.pos.y == stage.groundY)
+        check("the heist grabs a pretend file, runs off, and brings it back", sawLoot && !director.isActive && !thiefBuddy.isScripted
+              && thiefBuddy.pos.y == stage.groundY)
         heistController.checkWindows()
         check("no heist when nobody's on a Finder window", !director.isActive)
+        // The ledge dare walks to the real edge of the window it's on, then hangs off it.
+        stage.windowPlatforms = [8: WindowPlatform(origin: CGPoint(x: 300, y: 450), segments: [300...900], owner: "com.apple.Terminal")]
+        for _ in 0..<5 where !(climber.platform == 8 && climber.canJoinGame) {
+            // Drop it onto the window, away from the main buddy so it doesn't land on its head.
+            simulate(2, until: { climber.canJoinGame || climber.platform == 8 })
+            climber.grab(at: climber.pos, time: 0)
+            // Slowly, so it's a gentle drop rather than a throw.
+            climber.drag(to: CGPoint(x: main.pos.x < 600 ? 800 : 400, y: 520), time: 5)
+            climber.drag(to: CGPoint(x: main.pos.x < 600 ? 800 : 400, y: 520), time: 10)
+            climber.release()
+            simulate(4, until: { climber.platform == 8 && climber.canJoinGame })
+        }
+        director.start(builtin.activities["ledge-dare"]!, preferred: climber)
+        var reachedEdge = false, hung = false
+        simulate(30) {
+            if let p = director.performance, let a = p.actors["daredevil"] {
+                if abs(a.x - (900 - 6 * stage.pixel)) < 2 && abs(a.y - 450) < 1 { reachedEdge = true }
+                if a.x > 900 && a.y < 450 { hung = true }
+            }
+            return !director.isActive
+        }
+        check("ledge dare walks to the window's edge and hangs off it", reachedEdge && hung && !director.isActive,
+              "edge=\(reachedEdge) hung=\(hung) platform=\(climber.platform)")
         stage.windowPlatforms = [:]
         climber.beginLeaving()
         simulate(10)

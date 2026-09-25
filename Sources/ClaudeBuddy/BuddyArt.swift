@@ -148,15 +148,17 @@ enum BuddyArt {
     private static var thinkCache: [Int: CGImage] = [:]
 
     /// Thought bubble with 0–3 animated dots.
-    static func thinkBubble(dots: Int) -> CGImage {
-        if let t = thinkCache[dots] { return t }
+    /// `tailRight`: the tail points down-right, for a bubble on the buddy's left.
+    static func thinkBubble(dots: Int, tailRight: Bool = false) -> CGImage {
+        let key = dots + (tailRight ? 100 : 0)
+        if let t = thinkCache[key] { return t }
         var c = PixelCanvas(width: 14, height: 9)
         roundedBox(&c, 0, 2, 14, 7)
         for i in 0..<dots { c.fill(2 + i * 4, 4, 2, 2, Palette.body) }
-        c.set(3, 1, Palette.outline)
-        c.set(1, 0, Palette.outline)
+        c.set(tailRight ? 10 : 3, 1, Palette.outline)
+        c.set(tailRight ? 12 : 1, 0, Palette.outline)
         let i = c.cgImage()
-        thinkCache[dots] = i
+        thinkCache[key] = i
         return i
     }
 

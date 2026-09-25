@@ -1278,7 +1278,8 @@ final class Buddy {
             offset = CGPoint(x: 0, y: (12 + bounce) * pixel)
         case .walk, .stand:
             if activity == .thinking || activity.isTool {
-                image = BuddyArt.thinkBubble(dots: Int(clock * 2.5) % 4)
+                // On the left side (facing left), the tail points down-right, back at the buddy.
+                image = BuddyArt.thinkBubble(dots: Int(clock * 2.5) % 4, tailRight: facing < 0)
                 offset = CGPoint(x: facing * 6 * pixel, y: 11 * pixel)
             }
         default:

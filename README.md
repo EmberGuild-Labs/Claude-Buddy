@@ -79,13 +79,16 @@ A tiny pixel-art Claude critter that lives along the bottom of your Mac's screen
   | `E` | **Coffee break.** A coffee machine rises and brews, and the buddy sits sipping until you ⌥-click it. It also happens by itself at 10:30 on weekdays. |
   | `G` | **Coffee refill.** Wanders off-screen and comes back with a steaming mug (sometimes one shot too many). It also happens every 90 minutes while Claude is working. |
   | `L` | **File heist (pretend).** On a Finder window, sneaks up, grabs a pixel-art file, jumps down, and runs off-screen with it. Then it comes back and puts it back ("Your files never left"). It also happens now and then when a buddy is on a Finder window. It's all art: no real files are ever touched. |
+  | `I` | **Window graffiti.** On any window, sprays "BUDDY WAS HERE" onto it letter by letter and admires it. ⌥-click it and it panics and scrubs it off with a sponge (it cleans up by itself otherwise). It's pixel art on the buddy's layer; the window is untouched. |
+  | `J` | **Ledge dare.** "Watch this!" It walks to the very edge of the window, wobbles, and slips, hanging by one hand. ⌥-click to rescue it ("My hero!"), or it falls and shakes it off ("I'm OK!"). |
+  | `A` | **Paper airplane.** Folds a plane and throws it. The plane climbs, does a loop-de-loop, and nose-dives, bonking another buddy if one's around. |
   | `N` | **New text alert** (a demo of what happens when a text arrives). |
   | `Z` | **Pizza party.** A pizza box drops from the sky and the buddies share slices. It also happens now and then when a Claude session finishes. |
   | `Esc` | Stop whatever it's doing |
 
   - **Everything's in the menu.** Everything is also listed under **Extras → Tricks & Activities**. **Extras → Accessories** has a wizard hat, chef hat, headphones, sunglasses, a bow tie, a hero cape, and more.
   - **Make your own.** A **pack** is a JSON file that adds pixel-art accessories, animations, and scripted activities with props, speech bubbles, several buddies, and puppet controls. Packs can also add keyboard shortcuts and **triggers**: "at 14:30", "every 45 minutes on weekdays", "when I open Xcode", "when Claude finishes". Start with **Extras → Packs → Open Packs Folder**. The guide is [docs/PACKS.md](docs/PACKS.md), and [docs/example-pack.json](docs/example-pack.json) shows every feature.
-  - **Automatic treats.** Turn off the automatic coffee breaks, refills, pizza, and file heists with **Extras → Schedules & Triggers → Automatic Treats**.
+  - **Automatic treats.** Turn off the automatic coffee breaks, refills, pizza, heists, graffiti, ledge dares, and paper airplanes with **Extras → Schedules & Triggers → Automatic Treats**.
   - **New texts (opt-in).** Turn on **Extras → Schedules & Triggers → Watch for New Texts**, and when a text arrives the buddy pulls out a phone and says so. ⌥-click it to open Messages.
     - **Permission.** macOS only allows this with **Full Disk Access** for Claude Buddy. The app explains how and opens the right settings page.
     - **What it reads.** It opens the Messages database read-only and only counts new incoming messages. It never reads who sent them or what they say.

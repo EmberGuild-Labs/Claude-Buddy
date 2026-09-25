@@ -168,8 +168,9 @@ final class ExtrasCatalog {
         return nil
     }
 
-    private static let xBases: Set = ["left", "right", "center", "middle", "here", "start", "cursor", "offleft", "offright", "main"]
-    private static let yBases: Set = ["floor", "ground", "top", "here", "cursor", "start"]
+    private static let xBases: Set = ["left", "right", "center", "middle", "here", "start", "cursor", "offleft", "offright", "main",
+                                      "ledge", "ledge.left", "ledge.right"]
+    private static let yBases: Set = ["floor", "ground", "top", "here", "cursor", "start", "ledge"]
 
     private func check(_ e: PosExpr?, axis: String, roles: Set<String>, props: Set<String>) -> String? {
         guard let base = e?.base else { return nil }

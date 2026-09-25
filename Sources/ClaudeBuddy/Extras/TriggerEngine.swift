@@ -90,12 +90,13 @@ final class TriggerEngine {
     /// An idle buddy is standing on a window of this app. Returns true if something fired.
     @discardableResult
     func windowEvent(bundleID: String?, name: String?, subject: Buddy, now: Date) -> Bool {
-        var fired = false
-        for t in triggers {
+        // One mischief at a time: the first trigger that fires wins. Shuffled so a specific
+        // app's trigger doesn't always beat (or lose to) an "any window" one.
+        for t in triggers.shuffled() {
             guard case .onWindow(let match) = t.kind, Self.appMatches(match, name: name, bundleID: bundleID) else { continue }
-            if fireIfAllowed(t, now: now, context: TriggerContext(subject: subject, vars: ["app": name ?? match])) { fired = true }
+            if fireIfAllowed(t, now: now, context: TriggerContext(subject: subject, vars: ["app": name ?? match])) { return true }
         }
-        return fired
+        return false
     }
 
     /// New incoming texts arrived.
@@ -106,6 +107,7 @@ final class TriggerEngine {
 
     static func appMatches(_ match: String, name: String?, bundleID: String?) -> Bool {
         let m = match.lowercased()
+        if m == "*" || m == "any" { return true }
         if let b = bundleID?.lowercased(), b == m { return true }
         if let n = name?.lowercased(), n == m || n == m.replacingOccurrences(of: ".app", with: "") { return true }
         // No name to go on (the app isn't running): "Finder" still matches com.apple.finder.

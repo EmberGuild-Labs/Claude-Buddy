@@ -326,6 +326,7 @@ A position is a number or a string like `base+offset`, for example `"right-20"`,
 | `40%` of the screen width | `40%` of the screen height |
 | `here` (this buddy), `start` (where it began), `cursor`, `main` | `here`, `cursor` |
 | `offleft`, `offright`: just past the edges | |
+| `ledge`, `ledge.left`, `ledge.right`: the window edge the first buddy started on (with `stayOnWindows`); on the floor, the screen edges | `ledge`: that window edge's height (the floor if there isn't one) |
 | a role name, e.g. `friend` or `friend.x` | a role name (its feet), or `friend.head` |
 | a prop: `bed` / `bed.x` (center), `bed.left`, `bed.right` | a prop: `bed` / `bed.bottom`, `bed.top`, `bed.center` |
 
@@ -384,7 +385,7 @@ A position is a number or a string like `base+offset`, for example `"right-20"`,
 | `when: app-quit` | The app quits. |
 | `when: wake` | The Mac wakes from sleep. |
 | `when: startup` | Claude Buddy launches. |
-| `when: on-window` | An idle buddy is standing on a window of `app` (default cooldown 15 minutes). The activity is performed by *that* buddy when a role is `who: any` (or `other`); add `"stayOnWindows": true` so it starts up on the window. |
+| `when: on-window` | An idle buddy is standing on a window of `app` (`"any"` matches every app; default cooldown 15 minutes). Only one window trigger fires at a time. The activity is performed by *that* buddy when a role is `who: any` (or `other`); add `"stayOnWindows": true` so it starts up on the window. |
 | `when: new-text` | New incoming texts arrived. Needs **Extras → Schedules & Triggers → Watch for New Texts**, which needs Full Disk Access. Gives `{count}` ("a", "2", …) and `{s}` ("" or "s"). |
 | `when: claude` | A Claude Code hook event: `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `Notification`, `Stop`, `SessionEnd`. Add `"tool"` to match one tool. |
 
@@ -397,7 +398,7 @@ A position is a number or a string like `base+offset`, for example `"right-20"`,
 - **Placeholders.** Triggers fill in `{placeholders}` in `say` text: `{app}` for app and window triggers, `{project}`, `{tool}` and `{event}` for Claude triggers, and `{count}`/`{s}` for new texts. `{"when": "claude", "event": "Stop", "say": "Nice work on {project}!"}`
 - **`delay`** waits before running, for example `"delay": "4s"` so a "Stop" trigger runs after the buddy's own celebration.
 - **`if`** checks a condition when it's time to run, the same ones `if` steps use. `{"every": "90m", "if": "busy", ...}` only runs while Claude is working.
-- **Built-in triggers.** The built-in pack has four automatic treats: a coffee break at 10:30 on weekdays, a coffee refill every 90 minutes while Claude is busy, an occasional pizza party when a session finishes, and a pretend file heist when a buddy is on a Finder window. Turn them off with **Extras → Schedules & Triggers → Automatic Treats**. It also shows a text alert for new texts, but only when **Watch for New Texts** is on.
+- **Built-in triggers.** The built-in pack has four automatic treats: a coffee break at 10:30 on weekdays, a coffee refill every 90 minutes while Claude is busy, an occasional pizza party when a session finishes, a pretend file heist when a buddy is on a Finder window, window graffiti and a ledge dare when a buddy is on any window, and a paper airplane now and then when Claude isn't busy. Turn them off with **Extras → Schedules & Triggers → Automatic Treats**. It also shows a text alert for new texts, but only when **Watch for New Texts** is on.
 - **Busy or hidden.** If the buddy is busy (another activity, a nap) or hidden, a trigger waits up to 2 minutes for it to be free.
 
 ## Tips
